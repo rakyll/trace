@@ -34,6 +34,7 @@ func a1(ctx context.Context) {
 	ctx, s := t.NewSpan(ctx, "")
 	defer s.Finish()
 
+	s.Logf("something bad is happening at %v", time.Now())
 	time.Sleep(1 * time.Second)
 }
 
