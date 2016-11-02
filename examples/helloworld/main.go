@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/rakyll/trace"
 )
@@ -21,7 +22,7 @@ func main() {
 }
 
 func f(ctx context.Context) {
-	ctx, s := t.NewSpan(ctx, "f")
+	ctx, s := t.NewSpan(ctx, "")
 	defer s.Finish()
 
 	a1(ctx)
@@ -30,16 +31,22 @@ func f(ctx context.Context) {
 }
 
 func a1(ctx context.Context) {
-	ctx, s := t.NewSpan(ctx, "a")
+	ctx, s := t.NewSpan(ctx, "")
 	defer s.Finish()
+
+	time.Sleep(1 * time.Second)
 }
 
 func a2(ctx context.Context) {
-	ctx, s := t.NewSpan(ctx, "a")
+	ctx, s := t.NewSpan(ctx, "a2")
 	defer s.Finish()
+
+	time.Sleep(2 * time.Second)
 }
 
 func a3(ctx context.Context) {
-	ctx, s := t.NewSpan(ctx, "a")
+	ctx, s := t.NewSpan(ctx, "a3")
 	defer s.Finish()
+
+	time.Sleep(3 * time.Second)
 }
