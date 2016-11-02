@@ -35,19 +35,19 @@ func a1(ctx context.Context) {
 	defer s.Finish()
 
 	s.Logf("something bad is happening at %v", time.Now())
-	time.Sleep(1 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 }
 
 func a2(ctx context.Context) {
 	ctx, s := t.NewSpan(ctx, "a2")
 	defer s.Finish()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(200 * time.Millisecond)
 }
 
 func a3(ctx context.Context) {
 	ctx, s := t.NewSpan(ctx, "a3")
 	defer s.Finish()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(300 * time.Millisecond)
 }
