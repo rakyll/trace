@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"runtime"
 	"time"
 
 	"github.com/rakyll/trace"
@@ -12,19 +11,16 @@ import (
 var t *trace.Client
 
 func main() {
-	ctx := context.Background()
-
-	client, err := trace.NewClient(ctx, "jbd-gce")
+	ctx, err := trace.NewTrace(context.Background(), "jbd-gce")
 	if err != nil {
 		log.Fatal(err)
 	}
-	t = client
 	f(ctx)
 }
 
 func f(ctx context.Context) {
-	ctx, s := t.NewSpan(ctx, "")
-	defer s.Finish()
+	ctx = trace.NewSpan(ctx, "")
+	defer trace.Finish(ctx)
 
 	go a1(ctx)
 	a2(ctx)
@@ -32,23 +28,23 @@ func f(ctx context.Context) {
 }
 
 func a1(ctx context.Context) {
-	ctx, s := t.NewSpan(ctx, "")
-	defer s.Finish()
+	ctx = trace.NewSpan(ctx, "")
+	defer trace.Finish(ctx)
 
-	s.Logf("this is a format string, num goroutines: %v", runtime.NumGoroutine())
+	// s.Logf("this is a format string, num goroutines: %v", runtime.NumGoroutine())
 	time.Sleep(100 * time.Millisecond)
 }
 
 func a2(ctx context.Context) {
-	ctx, s := t.NewSpan(ctx, "a2")
-	defer s.Finish()
+	ctx = trace.NewSpan(ctx, "a2")
+	defer trace.Finish(ctx)
 
 	time.Sleep(200 * time.Millisecond)
 }
 
 func a3(ctx context.Context) {
-	ctx, s := t.NewSpan(ctx, "a3")
-	defer s.Finish()
+	ctx = trace.NewSpan(ctx, "a3")
+	defer trace.Finish(ctx)
 
 	time.Sleep(300 * time.Millisecond)
 }

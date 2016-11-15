@@ -33,7 +33,7 @@ type Client struct {
 	bundler *bundler.Bundler
 }
 
-func NewClient(ctx context.Context, projID string, opts ...option.ClientOption) (*Client, error) {
+func NewTrace(ctx context.Context, projID string, opts ...option.ClientOption) (context.Context, error) {
 	o := []option.ClientOption{
 		option.WithScopes(cloudPlatformScope),
 		option.WithUserAgent(userAgent),
@@ -69,7 +69,7 @@ func NewClient(ctx context.Context, projID string, opts ...option.ClientOption) 
 	bundler.BundleByteLimit = 1000
 	bundler.BufferedByteLimit = 10000
 	c.bundler = bundler
-	return c, nil
+	return context.WithValue(ctx, clientKey, c), nil
 }
 
 func (c *Client) upload(traces []*api.Trace) error {
@@ -78,19 +78,19 @@ func (c *Client) upload(traces []*api.Trace) error {
 }
 
 type trace struct {
+	id string
+
 	sync.Mutex
-
-	client *Client
-	id     string
-	spans  []*Span
+	spans []*Span
 }
 
-func (t *trace) finish(s *Span) error {
+func (t *trace) finish(ctx context.Context, s *Span) error {
 	s.end = time.Now()
-	return t.client.upload([]*api.Trace{t.constructTrace(t.spans)})
+	c := contextClient(ctx)
+	return c.upload([]*api.Trace{t.constructTrace(c.proj, t.spans)})
 }
 
-func (t *trace) constructTrace(spans []*Span) *api.Trace {
+func (t *trace) constructTrace(projID string, spans []*Span) *api.Trace {
 	apiSpans := make([]*api.TraceSpan, len(spans))
 	for i, sp := range spans {
 		s := &api.TraceSpan{
@@ -104,7 +104,7 @@ func (t *trace) constructTrace(spans []*Span) *api.Trace {
 		apiSpans[i] = s
 	}
 	return &api.Trace{
-		ProjectId: t.client.proj,
+		ProjectId: projID,
 		TraceId:   t.id,
 		Spans:     apiSpans,
 	}
@@ -122,20 +122,17 @@ type Span struct {
 	end   time.Time
 }
 
-func (c *Client) NewSpan(ctx context.Context, name string) (context.Context, *Span) {
+func NewSpan(ctx context.Context, name string) context.Context {
 	parent := ContextSpan(ctx)
 	s := &Span{
-		client: c,
-		id:     nextSpanID(),
-		name:   name,
-		start:  time.Now(),
+		id:    nextSpanID(),
+		name:  name,
+		start: time.Now(),
 	}
-
 	if parent == nil {
 		s.trace = &trace{
-			client: c,
-			id:     nextTraceID(),
-			spans:  make([]*Span, 0),
+			id:    nextTraceID(),
+			spans: make([]*Span, 0),
 		}
 	} else {
 		s.trace = parent.trace
@@ -153,11 +150,10 @@ func (c *Client) NewSpan(ctx context.Context, name string) (context.Context, *Sp
 			s.name = fn.Name()
 		}
 	}
-	newctx := context.WithValue(ctx, ctxKey, s)
-	return newctx, s
+	return context.WithValue(ctx, ctxKey, s)
 }
 
-func (s *Span) Logf(format string, arg ...interface{}) error {
+func Logf(ctx context.Context, format string, arg ...interface{}) error {
 	panic("not yet implemented")
 }
 
@@ -176,17 +172,32 @@ func ContextSpan(ctx context.Context) *Span {
 	if v == nil {
 		return nil
 	}
-	return ctx.Value(ctxKey).(*Span)
+	return v.(*Span)
+}
+
+func contextClient(ctx context.Context) *Client {
+	v := ctx.Value(clientKey)
+	if v == nil {
+		return nil
+	}
+	return v.(*Client)
 }
 
 // Finish finishes the current span.
-func (s *Span) Finish() {
+func Finish(ctx context.Context) {
+	s := ContextSpan(ctx)
+	if s == nil {
+		return
+	}
 	s.end = time.Now()
 	// TODO(jbd):
 	// TODO(jbd): Add an error handler?
-	if err := s.trace.finish(s); err != nil {
+	if err := s.trace.finish(ctx, s); err != nil {
 		log.Print(err)
 	}
 }
 
-var ctxKey = struct{}{}
+type key string
+
+var ctxKey = key("span")
+var clientKey = key("client")
