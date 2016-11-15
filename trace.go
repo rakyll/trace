@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/logging"
+
 	api "google.golang.org/api/cloudtrace/v1"
 	"google.golang.org/api/support/bundler"
 	"google.golang.org/api/transport"
@@ -28,7 +30,9 @@ const (
 )
 
 type Client struct {
-	service *api.Service
+	service   *api.Service
+	logClient *logging.Client
+
 	proj    string
 	bundler *bundler.Bundler
 }
@@ -51,9 +55,14 @@ func New(ctx context.Context, projID string, opts ...option.ClientOption) (conte
 		// An option set a basepath, so override api.New's default.
 		apiService.BasePath = basePath
 	}
+	lc, err := logging.NewClient(ctx, projID)
+	if err != nil {
+		return nil, err
+	}
 	c := &Client{
-		service: apiService,
-		proj:    projID,
+		service:   apiService,
+		proj:      projID,
+		logClient: lc,
 	}
 	bundler := bundler.NewBundler((*api.Trace)(nil), func(bundle interface{}) {
 		traces := bundle.([]*api.Trace)
@@ -154,7 +163,11 @@ func WithSpan(ctx context.Context, name string) context.Context {
 }
 
 func Logf(ctx context.Context, format string, arg ...interface{}) error {
-	panic("not yet implemented")
+	c := contextClient(ctx)
+	if c == nil {
+		panic("no trace client in context")
+	}
+	return c.logClient.Logger("").LogSync(ctx, logging.Entry{Payload: fmt.Sprintf(format, arg)})
 }
 
 // TraceID returns the ID of the trace to which s belongs.

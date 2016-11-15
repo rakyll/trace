@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"runtime"
 	"time"
 
 	"github.com/rakyll/trace"
@@ -31,7 +32,7 @@ func a1(ctx context.Context) {
 	ctx = trace.WithSpan(ctx, "")
 	defer trace.Finish(ctx)
 
-	// s.Logf("this is a format string, num goroutines: %v", runtime.NumGoroutine())
+	trace.Logf(ctx, "this is a format string, num goroutines: %v", runtime.NumGoroutine())
 	time.Sleep(100 * time.Millisecond)
 }
 
