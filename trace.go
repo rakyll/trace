@@ -33,7 +33,7 @@ type Client struct {
 	bundler *bundler.Bundler
 }
 
-func NewTrace(ctx context.Context, projID string, opts ...option.ClientOption) (context.Context, error) {
+func New(ctx context.Context, projID string, opts ...option.ClientOption) (context.Context, error) {
 	o := []option.ClientOption{
 		option.WithScopes(cloudPlatformScope),
 		option.WithUserAgent(userAgent),
@@ -122,7 +122,7 @@ type Span struct {
 	end   time.Time
 }
 
-func NewSpan(ctx context.Context, name string) context.Context {
+func WithSpan(ctx context.Context, name string) context.Context {
 	parent := ContextSpan(ctx)
 	s := &Span{
 		id:    nextSpanID(),
