@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/rakyll/trace"
+	"github.com/rakyll/gcptrace"
 )
 
 var t *trace.Client
