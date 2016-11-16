@@ -9,8 +9,6 @@ import (
 	"github.com/rakyll/gcptrace"
 )
 
-var t *trace.Client
-
 func main() {
 	ctx, err := trace.New(context.Background(), "jbd-gce")
 	if err != nil {
