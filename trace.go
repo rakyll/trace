@@ -120,6 +120,8 @@ func (t *trace) constructTrace(projID string, spans []*Span) *api.Trace {
 	}
 }
 
+// TODO(jbd): Span should be an interface
+
 type Span struct {
 	client *Client
 	trace  *trace
@@ -171,12 +173,18 @@ func Logf(ctx context.Context, format string, arg ...interface{}) error {
 	return c.logClient.Logger("").LogSync(ctx, logging.Entry{Payload: fmt.Sprintf(format, arg)})
 }
 
-// TraceID returns the ID of the trace to which s belongs.
-func (s *Span) TraceID() string {
+// TraceID returns the ID of the trace to which context belongs.
+// If ctx doesn't include a trace client, returns empty string.
+func TraceID(ctx context.Context) string {
+	s := ContextSpan(ctx)
 	if s == nil {
 		return ""
 	}
 	return s.trace.id
+}
+
+func SetLabel(ctx context.Context, key, value string) {
+	panic("not implemented")
 }
 
 // ContextSpan returns a span from the current context or nil
