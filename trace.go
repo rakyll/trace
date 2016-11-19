@@ -2,6 +2,7 @@ package trace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"runtime"
@@ -165,7 +166,7 @@ func WithSpan(ctx context.Context, name string) context.Context {
 func Logf(ctx context.Context, format string, arg ...interface{}) error {
 	c := contextClient(ctx)
 	if c == nil {
-		panic("no trace client in context")
+		return errors.New("no trace client in context")
 	}
 	return c.logClient.Logger("").LogSync(ctx, logging.Entry{Payload: fmt.Sprintf(format, arg)})
 }
