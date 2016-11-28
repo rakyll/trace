@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"runtime"
 	"time"
 
 	api "google.golang.org/api/cloudtrace/v1"
@@ -95,15 +94,6 @@ func (c *Client) NewSpan(ctx context.Context, name string) context.Context {
 	s.trace.Lock()
 	s.trace.spans = append(s.trace.spans, s)
 	s.trace.Unlock()
-
-	if s.name == "" {
-		// the name of the caller function
-		pc, _, _, ok := runtime.Caller(1)
-		if ok {
-			fn := runtime.FuncForPC(pc)
-			s.name = fn.Name()
-		}
-	}
 	return context.WithValue(ctx, spanKey, s)
 }
 

@@ -1,7 +1,10 @@
 package trace
 
-import "context"
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"runtime"
+)
 
 type Tracer interface {
 	NewSpan(ctx context.Context, name string) context.Context
@@ -17,6 +20,14 @@ func WithSpan(ctx context.Context, name string) context.Context {
 	t := tracerFromContext(ctx)
 	if t == nil {
 		return ctx
+	}
+	if name == "" {
+		// the name of the caller function
+		pc, _, _, ok := runtime.Caller(1)
+		if ok {
+			fn := runtime.FuncForPC(pc)
+			name = fn.Name()
+		}
 	}
 	return t.NewSpan(ctx, name)
 }
