@@ -120,8 +120,6 @@ func (t *trace) constructTrace(projID string, spans []*Span) *api.Trace {
 	}
 }
 
-// TODO(jbd): Span should be an interface.
-
 type Span struct {
 	client *Client
 	trace  *trace

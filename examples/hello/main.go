@@ -6,14 +6,18 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/rakyll/gcptrace"
+	"github.com/rakyll/gcptrace/trace"
+	"github.com/rakyll/gcptrace/trace/gcp"
 )
 
 func main() {
-	ctx, err := trace.New(context.Background(), "jbd-gce")
+	ctx := context.Background()
+	c, err := gcp.NewClient(ctx, "jbd-gce")
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	ctx = trace.WithTrace(ctx, c)
 	f(ctx)
 }
 
