@@ -1,3 +1,4 @@
+// Package gcp contains a Google Cloud Platform-specific implementation of the generic tracing APIs.
 package gcp
 
 import (
