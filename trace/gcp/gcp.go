@@ -78,19 +78,20 @@ func (c *Client) upload(traces []*api.Trace) error {
 func (c *Client) NewSpan(ctx context.Context, name string) context.Context {
 	parent := contextSpan(ctx)
 	s := &span{
-		id:    nextSpanID(),
-		name:  name,
-		start: time.Now(),
+		id:   nextSpanID(),
+		name: name,
 	}
 	if parent == nil {
 		s.trace = &trace{
-			id:    nextTraceID(),
-			spans: make([]*span, 0),
+			id:     nextTraceID(),
+			spans:  make([]*span, 0),
+			client: c,
 		}
 	} else {
 		s.trace = parent.trace
 		s.parentID = parent.id
 	}
+	s.start = time.Now()
 	s.trace.Lock()
 	s.trace.spans = append(s.trace.spans, s)
 	s.trace.Unlock()

@@ -43,6 +43,8 @@ func nextTraceID() string {
 }
 
 type trace struct {
+	client *Client
+
 	id string
 
 	sync.Mutex
@@ -50,9 +52,7 @@ type trace struct {
 }
 
 func (t *trace) finish(ctx context.Context, s *span) error {
-	s.end = time.Now()
-	c := contextClient(ctx)
-	return c.upload([]*api.Trace{t.constructTrace(c.proj, t.spans)})
+	return t.client.upload([]*api.Trace{t.constructTrace(t.client.proj, t.spans)})
 }
 
 func (t *trace) constructTrace(projID string, spans []*span) *api.Trace {
