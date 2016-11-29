@@ -2,11 +2,12 @@ package trace_test
 
 import (
 	"context"
-	"log"
 
 	"github.com/rakyll/gcptrace/trace"
-	"github.com/rakyll/gcptrace/trace/gcp"
 )
+
+var ctx = context.Background()
+var tracer = trace.Tracer(nil)
 
 func Example() {
 	call := func(ctx context.Context) {
@@ -16,12 +17,18 @@ func Example() {
 		trace.Logf(ctx, "it took too long...")
 	}
 
-	ctx := context.Background()
-	c, err := gcp.NewClient(ctx, "jbd-gce")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ctx = trace.WithTrace(ctx, c)
+	ctx = trace.WithTrace(context.Background(), tracer)
 	call(ctx)
+}
+
+func ExampleFinish() {
+	ctx = trace.WithSpan(ctx, "")
+	defer trace.Finish(ctx)
+}
+
+func ExampleWithSpan() {
+	// Create a span that will track the function that
+	// reads the users from the users service.
+	ctx = trace.WithSpan(ctx, "/api.ReadUsers")
+	defer trace.Finish(ctx)
 }
