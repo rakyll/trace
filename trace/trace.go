@@ -29,7 +29,7 @@ type Client interface {
 	Finish(ctx context.Context, labels map[string]interface{})
 
 	// Log associates the payload with the span in the context and logs it.
-	Log(ctx context.Context, payload interface{}) error
+	Log(ctx context.Context, payload fmt.Stringer) error
 }
 
 // WithClient adds a Client into the current context later to be used to interact with
@@ -78,22 +78,27 @@ func WithSpan(ctx context.Context, name string) context.Context {
 	return t.NewSpan(ctx, name)
 }
 
+type stringer struct {
+	format string
+	args   []interface{}
+}
+
+func (s *stringer) String() string {
+	return fmt.Sprintf(s.format, s.args...)
+}
+
 // Logf is like log.Printf.
 // It formats the given string, associates it with the context span and logs it at the backend.
 //
 // If context doesn't contain a trace client, Logf acts like as a no-op function.
 func Logf(ctx context.Context, format string, arg ...interface{}) error {
-	t := tracerFromContext(ctx)
-	if t == nil {
-		return nil
-	}
-	return t.Log(ctx, fmt.Sprintf(format, arg))
+	return Log(ctx, &stringer{format: format, args: arg})
 }
 
 // Log associates the given payload with the span in the current context and logs it at the backend.
 //
 // If context doesn't contain a trace client, Log acts like as a no-op function.
-func Log(ctx context.Context, payload interface{}) error {
+func Log(ctx context.Context, payload fmt.Stringer) error {
 	t := tracerFromContext(ctx)
 	if t == nil {
 		return nil

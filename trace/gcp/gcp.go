@@ -117,7 +117,7 @@ func (c *Client) Finish(ctx context.Context, tags map[string]interface{}) {
 	}
 }
 
-func (c *Client) Log(ctx context.Context, payload interface{}) error {
+func (c *Client) Log(ctx context.Context, payload fmt.Stringer) error {
 	// TODO(jbd): implement
 	return nil
 }
