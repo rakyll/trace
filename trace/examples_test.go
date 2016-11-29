@@ -8,7 +8,7 @@ import (
 )
 
 var ctx = context.Background()
-var tc = trace.TraceClient(nil)
+var tc = trace.Client(nil)
 
 func Example() {
 	call := func(ctx context.Context) {

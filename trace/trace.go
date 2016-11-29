@@ -7,13 +7,13 @@ import (
 	"runtime"
 )
 
-// TraceClient represents a client communicates with a tracing backend.
+// Client represents a client communicates with a tracing backend.
 // Tracing backends are supposed to implement the interface in order to
 // provide Go support.
 //
 // If you are not a backend provider, you will never have to interact with
 // this interface directly.
-type TraceClient interface {
+type Client interface {
 	// NewSpan creates a new child span from the current span in the current context.
 	// If there are no current spans in the current span, a top-level span is created.
 	NewSpan(ctx context.Context, name string) context.Context
@@ -29,11 +29,11 @@ type TraceClient interface {
 	Log(ctx context.Context, payload interface{}) error
 }
 
-// WithTrace adds a TraceClient into the current context later to be used to interact with
+// WithTrace adds a Client into the current context later to be used to interact with
 // the tracing backend.
 //
 // All trace package functions will act as no-ops if this function is not called with a non-nil trace client.
-func WithTrace(ctx context.Context, t TraceClient) context.Context {
+func WithTrace(ctx context.Context, t Client) context.Context {
 	return context.WithValue(ctx, traceKey, t)
 }
 
@@ -129,12 +129,12 @@ func Finish(ctx context.Context) {
 	}
 }
 
-func tracerFromContext(ctx context.Context) TraceClient {
+func tracerFromContext(ctx context.Context) Client {
 	v := ctx.Value(traceKey)
 	if v == nil {
 		return nil
 	}
-	return v.(TraceClient)
+	return v.(Client)
 }
 
 type contextKey string
