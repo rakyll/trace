@@ -27,8 +27,9 @@ type Tracer interface {
 }
 
 // WithTrace adds a Tracer into the current context later to be used to interact with
-// the tracing backend. All trace package functions works against the tracing client in the
-// current context and are no-ops if context doesn't contain a tracer.
+// the tracing backend.
+//
+// All trace package functions will act as no-ops if this function is not called with a non-nil tracer.
 func WithTrace(ctx context.Context, t Tracer) context.Context {
 	return context.WithValue(ctx, traceKey, t)
 }
@@ -60,6 +61,7 @@ func WithSpan(ctx context.Context, name string) context.Context {
 
 // Logf is like log.Printf.
 // It formats the given string, associates it with the context span and logs it at the backend.
+//
 // If context doesn't contain a tracer, Logf acts like as a no-op function.
 func Logf(ctx context.Context, format string, arg ...interface{}) error {
 	t := tracerFromContext(ctx)
@@ -70,6 +72,7 @@ func Logf(ctx context.Context, format string, arg ...interface{}) error {
 }
 
 // Log associates the given payload with the span in the current context and logs it at the backend.
+//
 // If context doesn't contain a tracer, Log acts like as a no-op function.
 func Log(ctx context.Context, payload interface{}) error {
 	t := tracerFromContext(ctx)
@@ -80,6 +83,7 @@ func Log(ctx context.Context, payload interface{}) error {
 }
 
 // SetLabel sets label identified with key on the current span.
+//
 // If context doesn't contain a tracer, SetLabel acts like as a no-op function.
 func SetLabel(ctx context.Context, key string, value interface{}) {
 	v := ctx.Value(labelsKey)
@@ -93,6 +97,8 @@ func SetLabel(ctx context.Context, key string, value interface{}) {
 }
 
 // Finish finalizes the span from the current context.
+// Each span context created by WithSpan should be finished when their work is finished.
+//
 // If context doesn't contain a tracer, Finish acts like as a no-op function.
 func Finish(ctx context.Context) {
 	t := tracerFromContext(ctx)
