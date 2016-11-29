@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/rakyll/gcptrace/trace"
-	"github.com/rakyll/gcptrace/trace/gcp"
+	"github.com/rakyll/trace"
+	"github.com/rakyll/trace/gcp"
 )
 
 func main() {
