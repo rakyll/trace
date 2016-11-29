@@ -19,6 +19,9 @@ type Tracer interface {
 	// If there are no current spans in the current span, a top-level span is created.
 	NewSpan(ctx context.Context, name string) context.Context
 
+	// TraceID returns the unique trace ID assigned to the current context's trace tree.
+	TraceID(ctx context.Context) string
+
 	// Finish finishes the span in the context with the given labels. Nil labels
 	// should be accepted.
 	Finish(ctx context.Context, labels map[string]interface{})
@@ -33,6 +36,17 @@ type Tracer interface {
 // All trace package functions will act as no-ops if this function is not called with a non-nil tracer.
 func WithTrace(ctx context.Context, t Tracer) context.Context {
 	return context.WithValue(ctx, traceKey, t)
+}
+
+// TraceID returns the current context's unique trace tree ID.
+//
+// If context doesn't contain a tracer, it returns empty string.
+func TraceID(ctx context.Context) string {
+	t := tracerFromContext(ctx)
+	if t == nil {
+		return ""
+	}
+	return t.TraceID(ctx)
 }
 
 // WithSpan creates a new child span from the current context. Users are supposed to

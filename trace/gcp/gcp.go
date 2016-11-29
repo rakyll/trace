@@ -98,6 +98,14 @@ func (c *Client) NewSpan(ctx context.Context, name string) context.Context {
 	return context.WithValue(ctx, spanKey, s)
 }
 
+func (c *Client) TraceID(ctx context.Context) string {
+	s := contextSpan(ctx)
+	if s == nil {
+		return "" // TODO(jbd): panic instead? It should never happen.
+	}
+	return s.trace.id
+}
+
 func (c *Client) Finish(ctx context.Context, tags map[string]interface{}) {
 	s := contextSpan(ctx)
 	if s == nil {
