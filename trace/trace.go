@@ -12,7 +12,8 @@ import (
 // provide Go support. Tracer implementations should use the current context
 // to preserve
 //
-// Most users will never have to interact with this interface directly.
+// If you are not a backend provider, you will never have to interact with
+// this interface directly.
 type Tracer interface {
 	// NewSpan creates a new child span from the current span in the current context.
 	// If there are no current spans in the current span, a top-level span is created.
