@@ -2,6 +2,7 @@ package trace_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/rakyll/gcptrace/trace"
 )
@@ -14,6 +15,7 @@ func Example() {
 		ctx = trace.WithSpan(ctx, "")
 		defer trace.Finish(ctx)
 
+		time.Sleep(time.Minute)
 		trace.Logf(ctx, "it took too long...")
 	}
 
@@ -22,7 +24,7 @@ func Example() {
 }
 
 func ExampleFinish() {
-	ctx = trace.WithSpan(ctx, "")
+	ctx = trace.WithSpan(ctx, "") // Creates new span for the context.
 	defer trace.Finish(ctx)
 }
 
