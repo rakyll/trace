@@ -8,7 +8,7 @@ import (
 )
 
 var ctx = context.Background()
-var tracer = trace.Tracer(nil)
+var tc = trace.TraceClient(nil)
 
 func Example() {
 	call := func(ctx context.Context) {
@@ -19,7 +19,7 @@ func Example() {
 		trace.Logf(ctx, "it took too long...")
 	}
 
-	ctx = trace.WithTrace(context.Background(), tracer)
+	ctx = trace.WithTrace(context.Background(), tc)
 	call(ctx)
 }
 

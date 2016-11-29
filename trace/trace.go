@@ -7,14 +7,13 @@ import (
 	"runtime"
 )
 
-// Tracer represents a tracing backend.
+// TraceClient represents a client communicates with a tracing backend.
 // Tracing backends are supposed to implement the interface in order to
-// provide Go support. Tracer implementations should use the current context
-// to preserve
+// provide Go support.
 //
 // If you are not a backend provider, you will never have to interact with
 // this interface directly.
-type Tracer interface {
+type TraceClient interface {
 	// NewSpan creates a new child span from the current span in the current context.
 	// If there are no current spans in the current span, a top-level span is created.
 	NewSpan(ctx context.Context, name string) context.Context
@@ -30,11 +29,11 @@ type Tracer interface {
 	Log(ctx context.Context, payload interface{}) error
 }
 
-// WithTrace adds a Tracer into the current context later to be used to interact with
+// WithTrace adds a TraceClient into the current context later to be used to interact with
 // the tracing backend.
 //
-// All trace package functions will act as no-ops if this function is not called with a non-nil tracer.
-func WithTrace(ctx context.Context, t Tracer) context.Context {
+// All trace package functions will act as no-ops if this function is not called with a non-nil trace client.
+func WithTrace(ctx context.Context, t TraceClient) context.Context {
 	return context.WithValue(ctx, traceKey, t)
 }
 
@@ -58,6 +57,8 @@ func TraceID(ctx context.Context) string {
 // If you need to represent any work indivually, you need to create a new span
 // within the current context by calling this function.
 // All the calls that is made by the returned span will be associated by the span created internally.
+//
+// If there is not trace client in the given context, WithSpan does nothing.
 func WithSpan(ctx context.Context, name string) context.Context {
 	t := tracerFromContext(ctx)
 	if t == nil {
@@ -77,7 +78,7 @@ func WithSpan(ctx context.Context, name string) context.Context {
 // Logf is like log.Printf.
 // It formats the given string, associates it with the context span and logs it at the backend.
 //
-// If context doesn't contain a tracer, Logf acts like as a no-op function.
+// If context doesn't contain a trace client, Logf acts like as a no-op function.
 func Logf(ctx context.Context, format string, arg ...interface{}) error {
 	t := tracerFromContext(ctx)
 	if t == nil {
@@ -88,7 +89,7 @@ func Logf(ctx context.Context, format string, arg ...interface{}) error {
 
 // Log associates the given payload with the span in the current context and logs it at the backend.
 //
-// If context doesn't contain a tracer, Log acts like as a no-op function.
+// If context doesn't contain a trace client, Log acts like as a no-op function.
 func Log(ctx context.Context, payload interface{}) error {
 	t := tracerFromContext(ctx)
 	if t == nil {
@@ -99,7 +100,7 @@ func Log(ctx context.Context, payload interface{}) error {
 
 // SetLabel sets label identified with key on the current span.
 //
-// If context doesn't contain a tracer, SetLabel acts like as a no-op function.
+// If context doesn't contain a trace client, SetLabel acts like as a no-op function.
 func SetLabel(ctx context.Context, key string, value interface{}) {
 	v := ctx.Value(labelsKey)
 	var labels map[string]interface{}
@@ -114,7 +115,7 @@ func SetLabel(ctx context.Context, key string, value interface{}) {
 // Finish finalizes the span from the current context.
 // Each span context created by WithSpan should be finished when their work is finished.
 //
-// If context doesn't contain a tracer, Finish acts like as a no-op function.
+// If context doesn't contain a trace client, Finish acts like as a no-op function.
 func Finish(ctx context.Context) {
 	t := tracerFromContext(ctx)
 	if t == nil {
@@ -128,12 +129,12 @@ func Finish(ctx context.Context) {
 	}
 }
 
-func tracerFromContext(ctx context.Context) Tracer {
+func tracerFromContext(ctx context.Context) TraceClient {
 	v := ctx.Value(traceKey)
 	if v == nil {
 		return nil
 	}
-	return v.(Tracer)
+	return v.(TraceClient)
 }
 
 type contextKey string
