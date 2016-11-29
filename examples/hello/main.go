@@ -17,7 +17,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ctx = trace.WithTrace(ctx, c)
+	ctx = trace.WithClient(ctx, c)
 	f(ctx)
 }
 

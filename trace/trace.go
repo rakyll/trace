@@ -1,4 +1,7 @@
 // Package trace defines common-use Dapper-style tracing APIs for the Go programming language.
+//
+// Package trace provides a backend-agnostic APIs and various tracing providers
+// can be used with the package by importing various implementations of the Client interface.
 package trace
 
 import (
@@ -29,12 +32,12 @@ type Client interface {
 	Log(ctx context.Context, payload interface{}) error
 }
 
-// WithTrace adds a Client into the current context later to be used to interact with
+// WithClient adds a Client into the current context later to be used to interact with
 // the tracing backend.
 //
 // All trace package functions will act as no-ops if this function is not called with a non-nil trace client.
-func WithTrace(ctx context.Context, t Client) context.Context {
-	return context.WithValue(ctx, traceKey, t)
+func WithClient(ctx context.Context, c Client) context.Context {
+	return context.WithValue(ctx, traceKey, c)
 }
 
 // TraceID returns the current context's unique trace tree ID.

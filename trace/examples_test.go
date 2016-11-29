@@ -19,7 +19,7 @@ func Example() {
 		trace.Logf(ctx, "it took too long...")
 	}
 
-	ctx = trace.WithTrace(context.Background(), tc)
+	ctx = trace.WithClient(context.Background(), tc)
 	call(ctx)
 }
 
