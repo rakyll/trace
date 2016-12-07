@@ -21,7 +21,7 @@ func (d *dc) NewSpan(ctx context.Context, name string) context.Context {
 	return context.WithValue(ctx, defaultTraceKey, tr)
 }
 
-func (d *dc) TraceID(ctx context.Context) []byte {
+func (d *dc) Info(ctx context.Context) []byte {
 	return []byte("") // not provided by the default client
 }
 
@@ -37,8 +37,8 @@ func (d *dc) Finish(ctx context.Context, labels map[string]interface{}) error {
 
 var defaultTraceKey = contextKey("defaultTrace")
 
-// func (d *dc) Log(ctx context.Context, payload fmt.Stringer) error {
-// 	v := ctx.Value(traceKey)
+// func (d *dc) Log(ctx context.Context, arg ...interface{}) error {
+// 	v := ctx.Value(defaultTraceKey)
 // 	if v == nil {
 // 		return nil
 // 	}

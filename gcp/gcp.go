@@ -98,7 +98,7 @@ func (c *Client) NewSpan(ctx context.Context, name string) context.Context {
 	return context.WithValue(ctx, spanKey, s)
 }
 
-func (c *Client) TraceID(ctx context.Context) []byte {
+func (c *Client) Info(ctx context.Context) []byte {
 	s := contextSpan(ctx)
 	if s == nil {
 		return nil // TODO(jbd): panic instead? It should never happen.

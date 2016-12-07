@@ -21,8 +21,8 @@ type Client interface {
 	// If there are no current spans in the current span, a top-level span is created.
 	NewSpan(ctx context.Context, name string) context.Context
 
-	// TraceID returns the unique trace identifier assigned to the current context's trace tree.
-	TraceID(ctx context.Context) []byte
+	// Info returns the unique trace identifier assigned to the current context's trace tree.
+	Info(ctx context.Context) []byte
 
 	// Finish finishes the span in the context with the given labels. Nil labels
 	// should be accepted.
@@ -41,15 +41,15 @@ func WithClient(ctx context.Context, c Client) context.Context {
 	return context.WithValue(ctx, traceInfoKey, info)
 }
 
-// TraceID returns the current context's unique trace tree ID.
+// Info returns the current context's trace info. Info is specific to how tracing backend identifies traces and spans.
 //
-// If context doesn't contain a trace client, it returns empty string.
-func TraceID(ctx context.Context) []byte {
-	t := tracerFromContext(ctx)
+// If context doesn't contain a trace client, it returns nil.
+func Info(ctx context.Context) []byte {
+	t := traceClientFromContext(ctx)
 	if t == nil {
 		return nil
 	}
-	return t.TraceID(ctx)
+	return t.Info(ctx)
 }
 
 // FinishFunc finalizes the span from the current context.
@@ -68,7 +68,7 @@ type FinishFunc func() error
 //
 // If there is not trace client in the given context, WithSpan does nothing.
 func WithSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
-	t := tracerFromContext(ctx)
+	t := traceClientFromContext(ctx)
 	if t == nil {
 		noop := func() error { return nil }
 		return ctx, noop
@@ -119,7 +119,7 @@ func SetLabel(ctx context.Context, key string, value interface{}) {
 	info.labels[key] = value
 }
 
-func tracerFromContext(ctx context.Context) Client {
+func traceClientFromContext(ctx context.Context) Client {
 	v := ctx.Value(traceInfoKey)
 	if v == nil {
 		return nil
