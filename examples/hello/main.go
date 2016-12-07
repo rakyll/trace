@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"runtime"
 	"time"
 
 	"github.com/rakyll/trace"
@@ -22,8 +21,8 @@ func main() {
 }
 
 func f(ctx context.Context) {
-	ctx = trace.WithSpan(ctx, "")
-	defer trace.Finish(ctx)
+	ctx, finish := trace.WithSpan(ctx, "")
+	defer finish()
 
 	go a1(ctx)
 	a2(ctx)
@@ -31,23 +30,22 @@ func f(ctx context.Context) {
 }
 
 func a1(ctx context.Context) {
-	ctx = trace.WithSpan(ctx, "")
-	defer trace.Finish(ctx)
+	ctx, finish := trace.WithSpan(ctx, "")
+	defer finish()
 
-	trace.Logf(ctx, "this is a format string, num goroutines: %v", runtime.NumGoroutine())
 	time.Sleep(100 * time.Millisecond)
 }
 
 func a2(ctx context.Context) {
-	ctx = trace.WithSpan(ctx, "a2")
-	defer trace.Finish(ctx)
+	ctx, finish := trace.WithSpan(ctx, "a2")
+	defer finish()
 
 	time.Sleep(200 * time.Millisecond)
 }
 
 func a3(ctx context.Context) {
-	ctx = trace.WithSpan(ctx, "a3")
-	defer trace.Finish(ctx)
+	ctx, finish := trace.WithSpan(ctx, "a3")
+	defer finish()
 
 	time.Sleep(300 * time.Millisecond)
 }

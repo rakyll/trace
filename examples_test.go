@@ -16,7 +16,6 @@ func Example() {
 		defer trace.Finish(ctx)
 
 		time.Sleep(time.Minute)
-		trace.Logf(ctx, "it took too long...")
 	}
 
 	ctx = trace.WithClient(context.Background(), tc)

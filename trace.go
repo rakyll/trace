@@ -21,16 +21,15 @@ type Client interface {
 	// If there are no current spans in the current span, a top-level span is created.
 	NewSpan(ctx context.Context, name string) context.Context
 
-	// TraceID returns the unique trace ID assigned to the current context's trace tree.
-	TraceID(ctx context.Context) string
+	// TraceID returns the unique trace identifier assigned to the current context's trace tree.
+	TraceID(ctx context.Context) []byte
 
 	// Finish finishes the span in the context with the given labels. Nil labels
 	// should be accepted.
-	Finish(ctx context.Context, labels map[string]interface{})
-
-	// Log associates the payload with the span in the context and logs it.
-	Log(ctx context.Context, payload fmt.Stringer) error
+	Finish(ctx context.Context, labels map[string]interface{}) error
 }
+
+// TODO(jbd): Add logger to Client?
 
 // WithClient adds a Client into the current context later to be used to interact with
 // the tracing backend.
@@ -43,13 +42,17 @@ func WithClient(ctx context.Context, c Client) context.Context {
 // TraceID returns the current context's unique trace tree ID.
 //
 // If context doesn't contain a tracer, it returns empty string.
-func TraceID(ctx context.Context) string {
+func TraceID(ctx context.Context) []byte {
 	t := tracerFromContext(ctx)
 	if t == nil {
-		return ""
+		return nil
 	}
 	return t.TraceID(ctx)
 }
+
+// FinishFunc finalizes the span from the current context.
+// Each span context created by WithSpan should be finished when their work is finished.
+type FinishFunc func() error
 
 // WithSpan creates a new child span from the current context. Users are supposed to
 // call Finish to finalize the span created by this function.
@@ -62,10 +65,11 @@ func TraceID(ctx context.Context) string {
 // All the calls that is made by the returned span will be associated by the span created internally.
 //
 // If there is not trace client in the given context, WithSpan does nothing.
-func WithSpan(ctx context.Context, name string) context.Context {
+func WithSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
 	t := tracerFromContext(ctx)
 	if t == nil {
-		return ctx
+		noop := func() error { return nil }
+		return ctx, noop
 	}
 	if name == "" {
 		// the name of the caller function
@@ -75,7 +79,16 @@ func WithSpan(ctx context.Context, name string) context.Context {
 			name = fn.Name()
 		}
 	}
-	return t.NewSpan(ctx, name)
+	newctx := t.NewSpan(ctx, name)
+	finish := func() error {
+		// TODO(jbd): pass the labels.
+		v := newctx.Value(labelsKey)
+		if v == nil {
+			return t.Finish(newctx, nil)
+		}
+		return t.Finish(newctx, v.(map[string]interface{}))
+	}
+	return newctx, finish
 }
 
 type stringer struct {
@@ -87,23 +100,8 @@ func (s *stringer) String() string {
 	return fmt.Sprintf(s.format, s.args...)
 }
 
-// Logf is like log.Printf.
-// It formats the given string, associates it with the context span and logs it at the backend.
-//
-// If context doesn't contain a trace client, Logf acts like as a no-op function.
-func Logf(ctx context.Context, format string, arg ...interface{}) error {
-	return Log(ctx, &stringer{format: format, args: arg})
-}
-
-// Log associates the given payload with the span in the current context and logs it at the backend.
-//
-// If context doesn't contain a trace client, Log acts like as a no-op function.
-func Log(ctx context.Context, payload fmt.Stringer) error {
-	t := tracerFromContext(ctx)
-	if t == nil {
-		return nil
-	}
-	return t.Log(ctx, payload)
+type Logger interface {
+	Log(ctx context.Context, arg ...fmt.Stringer) error
 }
 
 // SetLabel sets label identified with key on the current span.
@@ -118,23 +116,6 @@ func SetLabel(ctx context.Context, key string, value interface{}) {
 		labels = v.(map[string]interface{})
 	}
 	labels[key] = value
-}
-
-// Finish finalizes the span from the current context.
-// Each span context created by WithSpan should be finished when their work is finished.
-//
-// If context doesn't contain a trace client, Finish acts like as a no-op function.
-func Finish(ctx context.Context) {
-	t := tracerFromContext(ctx)
-	if t == nil {
-		return
-	}
-	v := ctx.Value(labelsKey)
-	if v == nil {
-		t.Finish(ctx, nil)
-	} else {
-		t.Finish(ctx, v.(map[string]interface{}))
-	}
 }
 
 func tracerFromContext(ctx context.Context) Client {

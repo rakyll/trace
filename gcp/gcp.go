@@ -98,26 +98,19 @@ func (c *Client) NewSpan(ctx context.Context, name string) context.Context {
 	return context.WithValue(ctx, spanKey, s)
 }
 
-func (c *Client) TraceID(ctx context.Context) string {
+func (c *Client) TraceID(ctx context.Context) []byte {
 	s := contextSpan(ctx)
 	if s == nil {
-		return "" // TODO(jbd): panic instead? It should never happen.
+		return nil // TODO(jbd): panic instead? It should never happen.
 	}
-	return s.trace.id
+	return []byte(s.trace.id)
 }
 
-func (c *Client) Finish(ctx context.Context, tags map[string]interface{}) {
+func (c *Client) Finish(ctx context.Context, tags map[string]interface{}) error {
 	s := contextSpan(ctx)
 	if s == nil {
-		return
+		return nil
 	}
 	s.end = time.Now()
-	if err := s.trace.finish(ctx, s); err != nil {
-		log.Print(err)
-	}
-}
-
-func (c *Client) Log(ctx context.Context, payload fmt.Stringer) error {
-	// TODO(jbd): implement
-	return nil
+	return s.trace.finish(ctx, s)
 }

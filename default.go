@@ -2,7 +2,6 @@ package trace
 
 import (
 	"context"
-	"fmt"
 
 	"golang.org/x/net/trace"
 )
@@ -22,25 +21,26 @@ func (d *dc) NewSpan(ctx context.Context, name string) context.Context {
 	return context.WithValue(ctx, traceKey, tr)
 }
 
-func (d *dc) TraceID(ctx context.Context) string {
-	return "" // not provided by the default client
+func (d *dc) TraceID(ctx context.Context) []byte {
+	return []byte("") // not provided by the default client
 }
 
-func (d *dc) Finish(ctx context.Context, labels map[string]interface{}) {
-	v := ctx.Value(traceKey)
-	if v == nil {
-		return
-	}
-	tr := v.(trace.Trace)
-	tr.Finish()
-}
-
-func (d *dc) Log(ctx context.Context, payload fmt.Stringer) error {
+func (d *dc) Finish(ctx context.Context, labels map[string]interface{}) error {
 	v := ctx.Value(traceKey)
 	if v == nil {
 		return nil
 	}
 	tr := v.(trace.Trace)
-	tr.LazyLog(payload, false)
+	tr.Finish()
 	return nil
 }
+
+// func (d *dc) Log(ctx context.Context, payload fmt.Stringer) error {
+// 	v := ctx.Value(traceKey)
+// 	if v == nil {
+// 		return nil
+// 	}
+// 	tr := v.(trace.Trace)
+// 	tr.LazyLog(payload, false)
+// 	return nil
+// }
