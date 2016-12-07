@@ -29,8 +29,6 @@ type Client interface {
 	Finish(ctx context.Context, labels map[string]interface{}) error
 }
 
-// TODO(jbd): Add logger to Client?
-
 // WithClient adds a Client into the current context later to be used to interact with
 // the tracing backend.
 //
@@ -99,6 +97,8 @@ type stringer struct {
 func (s *stringer) String() string {
 	return fmt.Sprintf(s.format, s.args...)
 }
+
+// TODO(jbd): Determine how Client can provide logging.
 
 type Logger interface {
 	Log(ctx context.Context, arg ...fmt.Stringer) error
