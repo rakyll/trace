@@ -34,7 +34,11 @@ type Client interface {
 //
 // All trace package functions will do nothing if this function is not called with a non-nil trace client.
 func WithClient(ctx context.Context, c Client) context.Context {
-	return context.WithValue(ctx, traceKey, c)
+	info := &traceInfo{
+		client: c,
+		labels: make(map[string]interface{}),
+	}
+	return context.WithValue(ctx, traceInfoKey, info)
 }
 
 // TraceID returns the current context's unique trace tree ID.
@@ -79,12 +83,11 @@ func WithSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
 	}
 	newctx := t.NewSpan(ctx, name)
 	finish := func() error {
-		// TODO(jbd): pass the labels.
-		v := newctx.Value(labelsKey)
+		v := newctx.Value(traceInfoKey)
 		if v == nil {
-			return t.Finish(newctx, nil)
+			return nil
 		}
-		return t.Finish(newctx, v.(map[string]interface{}))
+		return t.Finish(newctx, v.(*traceInfo).labels)
 	}
 	return newctx, finish
 }
@@ -108,27 +111,29 @@ type Logger interface {
 //
 // If context doesn't contain a trace client, SetLabel does nothing.
 func SetLabel(ctx context.Context, key string, value interface{}) {
-	v := ctx.Value(labelsKey)
-	var labels map[string]interface{}
+	v := ctx.Value(traceInfoKey)
 	if v == nil {
-		labels = make(map[string]interface{})
-	} else {
-		labels = v.(map[string]interface{})
+		return
 	}
-	labels[key] = value
+	info := v.(*traceInfo)
+	info.labels[key] = value
 }
 
 func tracerFromContext(ctx context.Context) Client {
-	v := ctx.Value(traceKey)
+	v := ctx.Value(traceInfoKey)
 	if v == nil {
 		return nil
 	}
-	return v.(Client)
+	return v.(*traceInfo).client
 }
 
 type contextKey string
 
 var (
-	traceKey  = contextKey("trace")
-	labelsKey = contextKey("labels")
+	traceInfoKey = contextKey("trace")
 )
+
+type traceInfo struct {
+	client Client
+	labels map[string]interface{}
+}

@@ -18,7 +18,7 @@ func DefaultClient(family string) Client {
 
 func (d *dc) NewSpan(ctx context.Context, name string) context.Context {
 	tr := trace.New(d.family, name)
-	return context.WithValue(ctx, traceKey, tr)
+	return context.WithValue(ctx, defaultTraceKey, tr)
 }
 
 func (d *dc) TraceID(ctx context.Context) []byte {
@@ -26,7 +26,7 @@ func (d *dc) TraceID(ctx context.Context) []byte {
 }
 
 func (d *dc) Finish(ctx context.Context, labels map[string]interface{}) error {
-	v := ctx.Value(traceKey)
+	v := ctx.Value(defaultTraceKey)
 	if v == nil {
 		return nil
 	}
@@ -34,6 +34,8 @@ func (d *dc) Finish(ctx context.Context, labels map[string]interface{}) error {
 	tr.Finish()
 	return nil
 }
+
+var defaultTraceKey = contextKey("defaultTrace")
 
 // func (d *dc) Log(ctx context.Context, payload fmt.Stringer) error {
 // 	v := ctx.Value(traceKey)
