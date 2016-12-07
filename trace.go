@@ -41,7 +41,7 @@ func WithClient(ctx context.Context, c Client) context.Context {
 
 // TraceID returns the current context's unique trace tree ID.
 //
-// If context doesn't contain a tracer, it returns empty string.
+// If context doesn't contain a trace client, it returns empty string.
 func TraceID(ctx context.Context) []byte {
 	t := tracerFromContext(ctx)
 	if t == nil {
