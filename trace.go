@@ -34,7 +34,7 @@ type Client interface {
 // WithClient adds a Client into the current context later to be used to interact with
 // the tracing backend.
 //
-// All trace package functions will act as no-ops if this function is not called with a non-nil trace client.
+// All trace package functions will do nothing if this function is not called with a non-nil trace client.
 func WithClient(ctx context.Context, c Client) context.Context {
 	return context.WithValue(ctx, traceKey, c)
 }
@@ -106,7 +106,7 @@ type Logger interface {
 
 // SetLabel sets label identified with key on the current span.
 //
-// If context doesn't contain a trace client, SetLabel acts like as a no-op function.
+// If context doesn't contain a trace client, SetLabel does nothing.
 func SetLabel(ctx context.Context, key string, value interface{}) {
 	v := ctx.Value(labelsKey)
 	var labels map[string]interface{}
