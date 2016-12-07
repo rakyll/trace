@@ -12,8 +12,8 @@ var tc = trace.Client(nil)
 
 func Example() {
 	call := func(ctx context.Context) {
-		ctx = trace.WithSpan(ctx, "")
-		defer trace.Finish(ctx)
+		ctx, finish := trace.WithSpan(ctx, "")
+		defer finish()
 
 		time.Sleep(time.Minute)
 	}
@@ -22,14 +22,18 @@ func Example() {
 	call(ctx)
 }
 
-func ExampleFinish() {
-	ctx = trace.WithSpan(ctx, "") // Creates new span for the context.
-	defer trace.Finish(ctx)
+func ExampleFinishFunc() {
+	ctx, finish := trace.WithSpan(ctx, "") // Creates new span for the context.
+	defer finish()
+
+	_ = ctx // keep using ctx
 }
 
 func ExampleWithSpan() {
 	// Create a span that will track the function that
 	// reads the users from the users service.
-	ctx = trace.WithSpan(ctx, "/api.ReadUsers")
-	defer trace.Finish(ctx)
+	ctx, finish := trace.WithSpan(ctx, "/api.ReadUsers")
+	defer finish()
+
+	_ = ctx // keep using ctx
 }
