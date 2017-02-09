@@ -37,6 +37,8 @@ type Client interface {
 // the tracing backend.
 //
 // All trace package functions will do nothing if this function is not called with a non-nil trace client.
+//
+// TODO(jbd): Inject the client into the context or have a global registery?
 func WithClient(ctx context.Context, c Client) context.Context {
 	info := &traceInfo{
 		client: c,
