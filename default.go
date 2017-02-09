@@ -2,6 +2,7 @@ package trace
 
 import (
 	"context"
+	"fmt"
 
 	"golang.org/x/net/trace"
 )
@@ -33,6 +34,15 @@ func (d *dc) Finish(ctx context.Context, labels map[string]interface{}) error {
 	tr := v.(trace.Trace)
 	tr.Finish()
 	return nil
+}
+
+type stringer struct {
+	format string
+	args   []interface{}
+}
+
+func (s *stringer) String() string {
+	return fmt.Sprintf(s.format, s.args...)
 }
 
 var defaultTraceKey = contextKey("defaultTrace")

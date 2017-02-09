@@ -6,7 +6,6 @@ package trace
 
 import (
 	"context"
-	"fmt"
 	"runtime"
 )
 
@@ -90,15 +89,6 @@ func WithSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
 		return t.Finish(newctx, v.(*traceInfo).labels)
 	}
 	return newctx, finish
-}
-
-type stringer struct {
-	format string
-	args   []interface{}
-}
-
-func (s *stringer) String() string {
-	return fmt.Sprintf(s.format, s.args...)
 }
 
 // SetLabel sets label identified with key on the current span.
