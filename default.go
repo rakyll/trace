@@ -36,13 +36,3 @@ func (d *dc) Finish(ctx context.Context, labels map[string]interface{}) error {
 }
 
 var defaultTraceKey = contextKey("defaultTrace")
-
-// func (d *dc) Log(ctx context.Context, arg ...interface{}) error {
-// 	v := ctx.Value(defaultTraceKey)
-// 	if v == nil {
-// 		return nil
-// 	}
-// 	tr := v.(trace.Trace)
-// 	tr.LazyLog(payload, false)
-// 	return nil
-// }

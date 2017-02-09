@@ -101,12 +101,6 @@ func (s *stringer) String() string {
 	return fmt.Sprintf(s.format, s.args...)
 }
 
-// TODO(jbd): Determine how Client can provide logging.
-
-type Logger interface {
-	Log(ctx context.Context, arg ...interface{}) error
-}
-
 // SetLabel sets label identified with key on the current span.
 //
 // If context doesn't contain a trace client, SetLabel does nothing.
