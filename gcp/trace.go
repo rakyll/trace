@@ -42,8 +42,8 @@ func nextTraceID() string {
 	return fmt.Sprintf("%016x%016x", id1, id2)
 }
 
-type trace struct {
-	client *Client
+type gcpTrace struct {
+	client *client
 
 	id string
 
@@ -51,11 +51,11 @@ type trace struct {
 	spans []*span
 }
 
-func (t *trace) finish(ctx context.Context, s *span) error {
+func (t *gcpTrace) finish(ctx context.Context, s *span) error {
 	return t.client.upload([]*api.Trace{t.constructTrace(t.client.proj, t.spans)})
 }
 
-func (t *trace) constructTrace(projID string, spans []*span) *api.Trace {
+func (t *gcpTrace) constructTrace(projID string, spans []*span) *api.Trace {
 	apiSpans := make([]*api.TraceSpan, len(spans))
 	for i, sp := range spans {
 		s := &api.TraceSpan{
@@ -76,7 +76,7 @@ func (t *trace) constructTrace(projID string, spans []*span) *api.Trace {
 }
 
 type span struct {
-	trace    *trace
+	trace    *gcpTrace
 	parentID uint64
 	id       uint64
 
@@ -86,12 +86,12 @@ type span struct {
 	end   time.Time
 }
 
-func contextClient(ctx context.Context) *Client {
+func contextClient(ctx context.Context) *client {
 	v := ctx.Value(clientKey)
 	if v == nil {
 		return nil
 	}
-	return v.(*Client)
+	return v.(*client)
 }
 
 // contextSpan returns a span from the current context or nil

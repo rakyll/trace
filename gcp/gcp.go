@@ -8,6 +8,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/rakyll/trace"
+
 	api "google.golang.org/api/cloudtrace/v1"
 	"google.golang.org/api/option"
 	"google.golang.org/api/support/bundler"
@@ -26,13 +28,13 @@ const (
 	labelSamplingWeight = `trace.cloud.google.com/sampling_weight`
 )
 
-type Client struct {
+type client struct {
 	service *api.Service
 	proj    string
 	bundler *bundler.Bundler
 }
 
-func NewClient(ctx context.Context, projID string, opts ...option.ClientOption) (*Client, error) {
+func NewClient(ctx context.Context, projID string, opts ...option.ClientOption) (trace.Client, error) {
 	o := []option.ClientOption{
 		option.WithScopes(cloudPlatformScope),
 		option.WithUserAgent(userAgent),
@@ -50,7 +52,7 @@ func NewClient(ctx context.Context, projID string, opts ...option.ClientOption) 
 		// An option set a basepath, so override api.New's default.
 		apiService.BasePath = basePath
 	}
-	c := &Client{
+	c := &client{
 		service: apiService,
 		proj:    projID,
 	}
@@ -71,20 +73,20 @@ func NewClient(ctx context.Context, projID string, opts ...option.ClientOption) 
 	return c, nil
 }
 
-func (c *Client) upload(traces []*api.Trace) error {
+func (c *client) upload(traces []*api.Trace) error {
 	_, err := c.service.Projects.PatchTraces(c.proj, &api.Traces{Traces: traces}).Do()
 	// TODO(jbd): How to handle errors?
 	return err
 }
 
-func (c *Client) NewSpan(parent context.Context, casual []byte, name string) context.Context {
+func (c *client) NewSpan(parent context.Context, casual []byte, name string) context.Context {
 	parentSpan := contextSpan(parent)
 	s := &span{
 		id:   nextSpanID(),
 		name: name,
 	}
 	if parentSpan == nil {
-		s.trace = &trace{
+		s.trace = &gcpTrace{
 			id:     nextTraceID(),
 			spans:  make([]*span, 0),
 			client: c,
@@ -101,13 +103,13 @@ func (c *Client) NewSpan(parent context.Context, casual []byte, name string) con
 	return context.WithValue(parent, spanKey, s)
 }
 
-func (c *Client) Span(ctx context.Context, name string, info []byte) (context.Context, error) {
+func (c *client) Span(ctx context.Context, name string, info []byte) (context.Context, error) {
 	v := spanID{}
 	if err := json.Unmarshal(info, &v); err != nil {
 		return nil, err
 	}
 	s := &span{
-		trace: &trace{
+		trace: &gcpTrace{
 			// Resurrected span cannot be finished,
 			// hence we don't care about setting all the fields.
 			client: c,
@@ -120,7 +122,7 @@ func (c *Client) Span(ctx context.Context, name string, info []byte) (context.Co
 	return context.WithValue(ctx, spanKey, s), nil
 }
 
-func (c *Client) Info(ctx context.Context) []byte {
+func (c *client) Info(ctx context.Context) []byte {
 	s := contextSpan(ctx)
 	if s == nil {
 		return nil
@@ -128,7 +130,7 @@ func (c *Client) Info(ctx context.Context) []byte {
 	return []byte(s.trace.id)
 }
 
-func (c *Client) Finish(ctx context.Context, tags map[string][]byte) error {
+func (c *client) Finish(ctx context.Context, tags map[string][]byte) error {
 	s := contextSpan(ctx)
 	if s == nil {
 		return nil
