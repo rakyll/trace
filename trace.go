@@ -16,16 +16,21 @@ import (
 // If you are not a backend provider, you will never have to interact with
 // this interface directly.
 type Client interface {
-	// NewSpan creates a new child span from the current span in the current context.
-	// If there are no current spans in the current span, a top-level span is created.
-	NewSpan(ctx context.Context, name string) context.Context
+	// NewSpan creates a new span from the parent context's span.
+	// If parent context doesn't already have a span, it creates a top-level span.
+	// If casual is not nil, implrmentors should assume the new span has a casual relationship with the given span.
+	NewSpan(parent context.Context, casual []byte, name string) context.Context
+
+	// Spans puts and existing span into a context derived from the given context.
+	// Nil name and info is not allowed.
+	Span(ctx context.Context, name string, info []byte) (context.Context, error)
 
 	// Info returns the unique trace identifier assigned to the current context's trace tree.
 	Info(ctx context.Context) []byte
 
 	// Finish finishes the span in the context with the given labels. Nil labels
 	// should be accepted.
-	Finish(ctx context.Context, labels map[string]interface{}) error
+	Finish(ctx context.Context, labels map[string][]byte) error
 }
 
 // WithClient adds a Client into the current context later to be used to interact with
@@ -35,14 +40,15 @@ type Client interface {
 func WithClient(ctx context.Context, c Client) context.Context {
 	info := &traceInfo{
 		client: c,
-		labels: make(map[string]interface{}),
+		labels: make(map[string][]byte),
 	}
 	return context.WithValue(ctx, traceInfoKey, info)
 }
 
-// Info returns the current context's trace info. Info is specific to how tracing backend identifies traces and spans.
+// Info returns the current context's span info. The format of info
+// is specific to how tracing backend identifies a span in a trace tree.
 //
-// If context doesn't contain a trace client, it returns nil.
+// If context doesn't contain a span, it returns nil.
 func Info(ctx context.Context) []byte {
 	t := traceClientFromContext(ctx)
 	if t == nil {
@@ -52,10 +58,10 @@ func Info(ctx context.Context) []byte {
 }
 
 // FinishFunc finalizes the span from the current context.
-// Each span context created by WithSpan should be finished when their work is finished.
+// Each span context created by ChildSpan should be finished when their work is finished.
 type FinishFunc func() error
 
-// WithSpan creates a new child span from the current context. Users are supposed to
+// ChildSpan creates a new child span from the current context. Users are supposed to
 // call Finish to finalize the span created by this function.
 //
 // If no name is given, caller function's name will be automatically.
@@ -65,11 +71,10 @@ type FinishFunc func() error
 // within the current context by calling this function.
 // All the calls that is made by the returned span will be associated by the span created internally.
 //
-// If there is not trace client in the given context, WithSpan does nothing.
-func WithSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
+// If there is not trace client in the given context, ChildSpan does nothing.
+func ChildSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
 	t := traceClientFromContext(ctx)
 	if t == nil {
-		noop := func() error { return nil }
 		return ctx, noop
 	}
 	if name == "" {
@@ -80,7 +85,7 @@ func WithSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
 			name = fn.Name()
 		}
 	}
-	newctx := t.NewSpan(ctx, name)
+	newctx := t.NewSpan(ctx, nil, name)
 	finish := func() error {
 		v := newctx.Value(traceInfoKey)
 		if v == nil {
@@ -91,10 +96,31 @@ func WithSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
 	return newctx, finish
 }
 
+func CasualSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
+	panic("not implemented")
+}
+
+// Span puts a span identified by name and info in a context derived from the current
+// context and returns it.
+//
+// It is useful for propagation where you retrieved information about a remote span
+// and want to resurrect it locally to create child spans from it.
+//
+// Name shouldn't be empty, info shouldn't be nil.
+func Span(ctx context.Context, name string, info []byte) (context.Context, error) {
+	t := traceClientFromContext(ctx)
+	if t == nil {
+		return ctx, nil
+	}
+	return t.Span(ctx, name, info)
+}
+
 // SetLabel sets label identified with key on the current span.
 //
 // If context doesn't contain a trace client, SetLabel does nothing.
-func SetLabel(ctx context.Context, key string, value interface{}) {
+//
+// TODO(jbd): Investigate the case for string keys and []byte values.
+func SetLabel(ctx context.Context, key string, value []byte) {
 	v := ctx.Value(traceInfoKey)
 	if v == nil {
 		return
@@ -113,11 +139,11 @@ func traceClientFromContext(ctx context.Context) Client {
 
 type contextKey string
 
-var (
-	traceInfoKey = contextKey("trace")
-)
+var traceInfoKey = contextKey("trace")
 
 type traceInfo struct {
 	client Client
-	labels map[string]interface{}
+	labels map[string][]byte
 }
+
+func noop() error { return nil }

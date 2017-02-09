@@ -3,6 +3,7 @@ package gcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -72,41 +73,62 @@ func NewClient(ctx context.Context, projID string, opts ...option.ClientOption) 
 
 func (c *Client) upload(traces []*api.Trace) error {
 	_, err := c.service.Projects.PatchTraces(c.proj, &api.Traces{Traces: traces}).Do()
+	// TODO(jbd): How to handle errors?
 	return err
 }
 
-func (c *Client) NewSpan(ctx context.Context, name string) context.Context {
-	parent := contextSpan(ctx)
+func (c *Client) NewSpan(parent context.Context, casual []byte, name string) context.Context {
+	parentSpan := contextSpan(parent)
 	s := &span{
 		id:   nextSpanID(),
 		name: name,
 	}
-	if parent == nil {
+	if parentSpan == nil {
 		s.trace = &trace{
 			id:     nextTraceID(),
 			spans:  make([]*span, 0),
 			client: c,
 		}
 	} else {
-		s.trace = parent.trace
-		s.parentID = parent.id
+		s.trace = parentSpan.trace
+		s.parentID = parentSpan.id
 	}
-	s.start = time.Now()
 	s.trace.Lock()
 	s.trace.spans = append(s.trace.spans, s)
 	s.trace.Unlock()
-	return context.WithValue(ctx, spanKey, s)
+
+	s.start = time.Now()
+	return context.WithValue(parent, spanKey, s)
+}
+
+func (c *Client) Span(ctx context.Context, name string, info []byte) (context.Context, error) {
+	v := spanID{}
+	if err := json.Unmarshal(info, &v); err != nil {
+		return nil, err
+	}
+	s := &span{
+		trace: &trace{
+			// Resurrected span cannot be finished,
+			// hence we don't care about setting all the fields.
+			client: c,
+			id:     v.TraceID,
+		},
+		parentID: v.ParentID,
+		id:       v.ID,
+		name:     name,
+	}
+	return context.WithValue(ctx, spanKey, s), nil
 }
 
 func (c *Client) Info(ctx context.Context) []byte {
 	s := contextSpan(ctx)
 	if s == nil {
-		return nil // TODO(jbd): panic instead? It should never happen.
+		return nil
 	}
 	return []byte(s.trace.id)
 }
 
-func (c *Client) Finish(ctx context.Context, tags map[string]interface{}) error {
+func (c *Client) Finish(ctx context.Context, tags map[string][]byte) error {
 	s := contextSpan(ctx)
 	if s == nil {
 		return nil

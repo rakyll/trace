@@ -11,7 +11,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	c, err := gcp.NewClient(ctx, "jbd-gce")
+	c, err := gcp.NewClient(ctx, "bamboo-shift-504")
 	if err != nil {
 		log.Fatal(err)
 	}

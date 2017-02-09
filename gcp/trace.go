@@ -76,12 +76,11 @@ func (t *trace) constructTrace(projID string, spans []*span) *api.Trace {
 }
 
 type span struct {
-	client *Client
-	trace  *trace
-
+	trace    *trace
 	parentID uint64
 	id       uint64
-	name     string
+
+	name string
 
 	start time.Time
 	end   time.Time
@@ -103,6 +102,12 @@ func contextSpan(ctx context.Context) *span {
 		return nil
 	}
 	return v.(*span)
+}
+
+type spanID struct {
+	TraceID  string
+	ParentID uint64
+	ID       uint64
 }
 
 type key string
