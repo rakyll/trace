@@ -30,11 +30,11 @@ func ExampleSpan() {
 	http.HandleFunc("/getUserStatuses", func(w http.ResponseWriter, req *http.Request) {
 		info := req.Header.Get("X-Trace")
 
-		// Ressurect an already existing span created by a remote server
+		// Resurrect an already existing span created by a remote server
 		// to create a child span from it.
 		ctx, err := trace.Span(ctx, "/getUsers", []byte(info))
 		if err != nil {
-			log.Fatalf("Cannot ressurect a remote span: %v", err)
+			log.Fatalf("Cannot resurrect a remote span: %v", err)
 		}
 
 		ctx, finish := trace.ChildSpan(ctx, "/getUserStatuses")
