@@ -21,7 +21,7 @@ func main() {
 }
 
 func f(ctx context.Context) {
-	ctx, finish := trace.WithSpan(ctx, "")
+	ctx, finish := trace.ChildSpan(ctx, "")
 	defer finish()
 
 	go a1(ctx)
@@ -30,21 +30,21 @@ func f(ctx context.Context) {
 }
 
 func a1(ctx context.Context) {
-	ctx, finish := trace.WithSpan(ctx, "")
+	ctx, finish := trace.ChildSpan(ctx, "")
 	defer finish()
 
 	time.Sleep(100 * time.Millisecond)
 }
 
 func a2(ctx context.Context) {
-	ctx, finish := trace.WithSpan(ctx, "a2")
+	ctx, finish := trace.ChildSpan(ctx, "a2")
 	defer finish()
 
 	time.Sleep(200 * time.Millisecond)
 }
 
 func a3(ctx context.Context) {
-	ctx, finish := trace.WithSpan(ctx, "a3")
+	ctx, finish := trace.ChildSpan(ctx, "a3")
 	defer finish()
 
 	time.Sleep(300 * time.Millisecond)
