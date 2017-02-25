@@ -79,7 +79,7 @@ func (c *client) upload(traces []*api.Trace) error {
 	return err
 }
 
-func (c *client) NewSpan(parent context.Context, casual []byte, name string) context.Context {
+func (c *client) NewSpan(parent context.Context, name string) context.Context {
 	parentSpan := contextSpan(parent)
 	s := &span{
 		id:   nextSpanID(),
@@ -99,7 +99,6 @@ func (c *client) NewSpan(parent context.Context, casual []byte, name string) con
 	s.trace.spans = append(s.trace.spans, s)
 	s.trace.Unlock()
 
-	s.start = time.Now()
 	return context.WithValue(parent, spanKey, s)
 }
 
@@ -130,11 +129,12 @@ func (c *client) Info(ctx context.Context) []byte {
 	return []byte(s.trace.id)
 }
 
-func (c *client) Finish(ctx context.Context, tags map[string][]byte) error {
+func (c *client) Finish(ctx context.Context, casual []byte, tags map[string][]byte, start, end time.Time) error {
 	s := contextSpan(ctx)
 	if s == nil {
 		return nil
 	}
-	s.end = time.Now()
+	s.start = start
+	s.end = end
 	return s.trace.finish(ctx, s)
 }

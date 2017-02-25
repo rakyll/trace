@@ -7,6 +7,7 @@ package trace
 import (
 	"context"
 	"runtime"
+	"time"
 )
 
 // Client represents a client communicates with a tracing backend.
@@ -17,9 +18,11 @@ import (
 // this interface directly.
 type Client interface {
 	// NewSpan creates a new span from the parent context's span.
+	//
 	// If parent context doesn't already have a span, it creates a top-level span.
-	// If casual is not nil, implrmentors should assume the new span has a casual relationship with the given span.
-	NewSpan(parent context.Context, casual []byte, name string) context.Context
+	//
+	// Span start time should be the given start.
+	NewSpan(parent context.Context, name string) context.Context
 
 	// Spans puts and existing span into a context derived from the given context.
 	// Nil name and info is not allowed.
@@ -28,9 +31,13 @@ type Client interface {
 	// Info returns the unique trace identifier assigned to the current context's trace tree.
 	Info(ctx context.Context) []byte
 
-	// Finish finishes the span in the context with the given labels. Nil labels
-	// should be accepted.
-	Finish(ctx context.Context, labels map[string][]byte) error
+	// Finish finishes the span in the context with the given labels.
+	//
+	// If casual is non-nil, span needs to be finalized with a casual relationship.
+	// Nil labels should be accepted.
+	//
+	// Span should have given start and end time.
+	Finish(ctx context.Context, causal []byte, labels map[string][]byte, start, end time.Time) error
 }
 
 // WithClient adds a Client into the current context later to be used to interact with
@@ -87,13 +94,14 @@ func ChildSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
 			name = fn.Name()
 		}
 	}
-	newctx := t.NewSpan(ctx, nil, name)
+	start := time.Now()
+	newctx := t.NewSpan(ctx, name)
 	finish := func() error {
 		v := newctx.Value(traceInfoKey)
 		if v == nil {
 			return nil
 		}
-		return t.Finish(newctx, v.(*traceInfo).labels)
+		return t.Finish(newctx, nil, v.(*traceInfo).labels, start, time.Now())
 	}
 	return newctx, finish
 }
@@ -109,12 +117,32 @@ func CasualSpan(ctx context.Context, name string) (context.Context, FinishFunc) 
 // and want to resurrect it locally to create child spans from it.
 //
 // Name shouldn't be empty, info shouldn't be nil.
-func Span(ctx context.Context, name string, info []byte) (context.Context, error) {
+func Span(ctx context.Context, name string, info []byte, start, end time.Time) (context.Context, error) {
 	t := traceClientFromContext(ctx)
 	if t == nil {
 		return ctx, nil
 	}
 	return t.Span(ctx, name, info)
+}
+
+// StartEnd creates a span started at start and finished at end.
+//
+// Most users will use ChildSpan and CausalSpan. Only users who already add an trace
+// entry for an already finished event should depend on this call.
+func StartEnd(ctx context.Context, name string, start, end time.Time) (context.Context, FinishFunc) {
+	t := traceClientFromContext(ctx)
+	if t == nil {
+		return ctx, nil
+	}
+	newctx := t.NewSpan(ctx, name)
+	finish := func() error {
+		v := newctx.Value(traceInfoKey)
+		if v == nil {
+			return nil
+		}
+		return t.Finish(newctx, nil, v.(*traceInfo).labels, start, end)
+	}
+	return newctx, finish
 }
 
 // SetLabel sets label identified with key on the current span.
