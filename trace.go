@@ -33,7 +33,7 @@ type Client interface {
 
 	// Finish finishes the span in the context with the given labels.
 	//
-	// If casual is non-nil, span needs to be finalized with a casual relationship.
+	// If causal is non-nil, span needs to be finalized with a causal relationship.
 	// Nil labels should be accepted.
 	//
 	// Span should have given start and end time.
@@ -106,7 +106,7 @@ func ChildSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
 	return newctx, finish
 }
 
-func CasualSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
+func CausalSpan(ctx context.Context, name string) (context.Context, FinishFunc) {
 	panic("not implemented")
 }
 
