@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-// HTTPer represents a mechanism that can attach the tracing information
-// into an HTTP request or extract it from one.
-type HTTPer interface {
+// HTTPCarrier represents a mechanism that can attach the tracing
+// information into an HTTP request or extract it from one.
+type HTTPCarrier interface {
 	FromHTTP(req *http.Request) (context.Context, error)
 	ToHTTP(ctx context.Context, req *http.Request) error
 }
@@ -25,8 +25,8 @@ type HTTPer interface {
 // If you are not a backend provider, you will never have to interact with
 // this interface directly.
 //
-// A Client is an HTTPer if it can propagate the tracing information
-// via an HTTP request.
+// A Client is an HTTPCarrier if it can propagate the tracing
+// information via an HTTP request.
 type Client interface {
 	// NewSpan creates a new span from the parent context's span.
 	//
