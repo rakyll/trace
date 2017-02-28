@@ -6,9 +6,17 @@ package trace
 
 import (
 	"context"
+	"net/http"
 	"runtime"
 	"time"
 )
+
+// HTTPer represents a mechanism that can attach the tracing information
+// into an HTTP request or extract it from one.
+type HTTPer interface {
+	FromHTTP(req *http.Request) (context.Context, error)
+	ToHTTP(ctx context.Context, req *http.Request) error
+}
 
 // Client represents a client communicates with a tracing backend.
 // Tracing backends are supposed to implement the interface in order to
@@ -16,6 +24,9 @@ import (
 //
 // If you are not a backend provider, you will never have to interact with
 // this interface directly.
+//
+// A Client is an HTTPer if it can propagate the tracing information
+// via an HTTP request.
 type Client interface {
 	// NewSpan creates a new span from the parent context's span.
 	//
@@ -117,7 +128,7 @@ func CausalSpan(ctx context.Context, name string) (context.Context, FinishFunc) 
 // and want to resurrect it locally to create child spans from it.
 //
 // Name shouldn't be empty, info shouldn't be nil.
-func Span(ctx context.Context, name string, info []byte, start, end time.Time) (context.Context, error) {
+func Span(ctx context.Context, name string, info []byte) (context.Context, error) {
 	t := traceClientFromContext(ctx)
 	if t == nil {
 		return ctx, nil
