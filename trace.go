@@ -14,7 +14,7 @@ import (
 // HTTPCarrier represents a mechanism that can attach the tracing
 // information into an HTTP request or extract it from one.
 type HTTPCarrier interface {
-	FromHTTP(req *http.Request) (context.Context, error)
+	FromHTTP(ctx context.Context, req *http.Request) (context.Context, error)
 	ToHTTP(ctx context.Context, req *http.Request) error
 }
 
