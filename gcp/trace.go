@@ -1,11 +1,9 @@
 package gcp
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -42,75 +40,44 @@ func nextTraceID() string {
 	return fmt.Sprintf("%016x%016x", id1, id2)
 }
 
-type gcpTrace struct {
-	client *client
+type span struct {
+	id   spanID
+	name string
 
-	id string
-
-	sync.Mutex
-	spans []*span
+	labels map[string][]byte
+	start  time.Time
+	end    time.Time
 }
 
-func (t *gcpTrace) finish(ctx context.Context, s *span) error {
-	return t.client.upload([]*api.Trace{t.constructTrace(t.client.proj, t.spans)})
+func finish(c *client, projID string, spans []*span) error {
+	// group by trace ID.
+	var traces []*api.Trace
+	for _, s := range spans {
+		t := constructTrace(projID, s)
+		traces = append(traces, t)
+	}
+	return c.upload(traces)
 }
 
-func (t *gcpTrace) constructTrace(projID string, spans []*span) *api.Trace {
-	apiSpans := make([]*api.TraceSpan, len(spans))
-	for i, sp := range spans {
-		s := &api.TraceSpan{
-			Name:         sp.name,
-			SpanId:       sp.id,
-			ParentSpanId: sp.parentID,
-			StartTime:    sp.start.In(time.UTC).Format(time.RFC3339Nano),
-			EndTime:      sp.end.In(time.UTC).Format(time.RFC3339Nano),
-			// TODO(jbd): add labels
-		}
-		apiSpans[i] = s
+func constructTrace(projID string, span *span) *api.Trace {
+	s := &api.TraceSpan{
+		Name:         span.name,
+		SpanId:       span.id.ID,
+		ParentSpanId: span.id.ParentID,
+		StartTime:    span.start.In(time.UTC).Format(time.RFC3339Nano),
+		EndTime:      span.end.In(time.UTC).Format(time.RFC3339Nano),
+		// TODO(jbd): add labels
 	}
 	return &api.Trace{
 		ProjectId: projID,
-		TraceId:   t.id,
-		Spans:     apiSpans,
+		TraceId:   span.id.TraceID,
+		Spans:     []*api.TraceSpan{s},
 	}
-}
-
-type span struct {
-	trace    *gcpTrace
-	parentID uint64
-	id       uint64
-
-	name string
-
-	start time.Time
-	end   time.Time
-}
-
-func contextClient(ctx context.Context) *client {
-	v := ctx.Value(clientKey)
-	if v == nil {
-		return nil
-	}
-	return v.(*client)
-}
-
-// contextSpan returns a span from the current context or nil
-// if no contexts exists in the current context.
-func contextSpan(ctx context.Context) *span {
-	v := ctx.Value(spanKey)
-	if v == nil {
-		return nil
-	}
-	return v.(*span)
 }
 
 type spanID struct {
 	TraceID  string
 	ParentID uint64
+	CausalID uint64
 	ID       uint64
 }
-
-type key string
-
-var spanKey = key("span")
-var clientKey = key("client")

@@ -75,66 +75,39 @@ func NewClient(ctx context.Context, projID string, opts ...option.ClientOption) 
 
 func (c *client) upload(traces []*api.Trace) error {
 	_, err := c.service.Projects.PatchTraces(c.proj, &api.Traces{Traces: traces}).Do()
-	// TODO(jbd): How to handle errors?
 	return err
 }
 
-func (c *client) NewSpan(parent context.Context, name string) context.Context {
-	parentSpan := contextSpan(parent)
+func (c *client) NewSpan(parent []byte, causal []byte) []byte { // TODO(jbd): add error.
+	var parentID spanID
+	var causalID spanID
+
+	if parent != nil {
+		json.Unmarshal(parent, &parentID) // ignore errors
+	}
+	if causal != nil {
+		json.Unmarshal(causal, &causalID) // ignore errors
+	}
+
+	id := spanID{
+		TraceID:  parentID.TraceID,
+		ID:       nextSpanID(),
+		CausalID: causalID.ID,
+		ParentID: parentID.ID,
+	}
+	by, _ := json.Marshal(id)
+	return by
+}
+
+func (c *client) Finish(id []byte, name string, labels map[string][]byte, start, end time.Time) error {
+	var ident spanID
+	json.Unmarshal(id, &ident) // ignore errors
 	s := &span{
-		id:   nextSpanID(),
-		name: name,
+		name:   name,
+		id:     ident,
+		labels: labels,
+		start:  start,
+		end:    end,
 	}
-	if parentSpan == nil {
-		s.trace = &gcpTrace{
-			id:     nextTraceID(),
-			spans:  make([]*span, 0),
-			client: c,
-		}
-	} else {
-		s.trace = parentSpan.trace
-		s.parentID = parentSpan.id
-	}
-	s.trace.Lock()
-	s.trace.spans = append(s.trace.spans, s)
-	s.trace.Unlock()
-
-	return context.WithValue(parent, spanKey, s)
-}
-
-func (c *client) Span(ctx context.Context, name string, info []byte) (context.Context, error) {
-	v := spanID{}
-	if err := json.Unmarshal(info, &v); err != nil {
-		return nil, err
-	}
-	s := &span{
-		trace: &gcpTrace{
-			// Resurrected span cannot be finished,
-			// hence we don't care about setting all the fields.
-			client: c,
-			id:     v.TraceID,
-		},
-		parentID: v.ParentID,
-		id:       v.ID,
-		name:     name,
-	}
-	return context.WithValue(ctx, spanKey, s), nil
-}
-
-func (c *client) Info(ctx context.Context) []byte {
-	s := contextSpan(ctx)
-	if s == nil {
-		return nil
-	}
-	return []byte(s.trace.id)
-}
-
-func (c *client) Finish(ctx context.Context, casual []byte, tags map[string][]byte, start, end time.Time) error {
-	s := contextSpan(ctx)
-	if s == nil {
-		return nil
-	}
-	s.start = start
-	s.end = end
-	return s.trace.finish(ctx, s)
+	return finish(c, c.proj, []*span{s})
 }

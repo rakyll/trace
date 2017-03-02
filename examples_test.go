@@ -1,62 +1,26 @@
 package trace_test
 
 import (
-	"context"
 	"log"
-	"net/http"
 
 	"github.com/rakyll/trace"
+	"github.com/rakyll/trace/gcp"
 )
 
-var ctx = context.Background()
-var tc = trace.Client(nil)
-
-func Example() {
-	call := func(ctx context.Context) {
-		ctx, finish := trace.ChildSpan(ctx, "/getUsers")
-		defer finish()
-
-		// Do the actual call to get users.
-		_ = ctx
+func ExampleNewTrace() {
+	c, err := gcp.NewClient("project-id")
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	ctx = trace.WithClient(context.Background(), tc)
-	call(ctx)
-}
-
-func ExampleSpan() {
-	ctx := context.Background()
-
-	http.HandleFunc("/getUserStatuses", func(w http.ResponseWriter, req *http.Request) {
-		info := req.Header.Get("X-Trace")
-
-		// Resurrect an already existing span created by a remote server
-		// to create a child span from it.
-		ctx, err := trace.Span(ctx, "/getUsers", []byte(info))
-		if err != nil {
-			log.Fatalf("Cannot resurrect a remote span: %v", err)
-		}
-
-		ctx, finish := trace.ChildSpan(ctx, "/getUserStatuses")
-		defer finish()
-
-		// Do the actual call to get user statuses.
-		_ = ctx
-	})
-}
-
-func ExampleFinishFunc() {
-	ctx, finish := trace.ChildSpan(ctx, "/getUsers") // Creates new span for the context.
+	root := trace.NewTrace(c)
+	sp, finish := root.Child("/whatever")
 	defer finish()
 
-	_ = ctx // keep using ctx
-}
+	sp.SetLabel("hello", []byte("error happened"))
 
-func ExampleChildSpan() {
-	// Create a span that will track the function that
-	// reads the users from the users service.
-	ctx, finish := trace.ChildSpan(ctx, "/getUsers")
-	defer finish()
-
-	_ = ctx // keep using ctx
+	carrier, ok := c.(HTTPCarrier)
+	if ok {
+		carrier.ToHTTP(req, sp.ID())
+	}
 }
