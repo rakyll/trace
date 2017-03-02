@@ -34,9 +34,9 @@ func (s *Span) SetLabel(key string, val []byte) {
 	s.labels[key] = val
 }
 
-// NewChild creates a child span from s with the given name.
+// Child creates a child span from s with the given name.
 // Created child span needs to be finished by calling the finishing function.
-func (s *Span) NewChild(name string) (*Span, FinishFunc) {
+func (s *Span) Child(name string) (*Span, FinishFunc) {
 	child := &Span{
 		id:     client.NewSpan(s.id, nil),
 		labels: make(map[string][]byte),
@@ -60,7 +60,7 @@ func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 	return req, nil
 }
 
-func (s *Span) NewCausal(name string) (*Span, FinishFunc) {
+func (s *Span) Causal(name string) (*Span, FinishFunc) {
 	panic("not yet")
 }
 
@@ -76,9 +76,9 @@ func (s *RemoteSpan) ID() []byte {
 	return s.id
 }
 
-// NewChild creates a child span from s with the given name.
+// Child creates a child span from s with the given name.
 // Created child span needs to be finished by calling the finishing function.
-func (s *RemoteSpan) NewChild(name string) (*Span, FinishFunc) {
+func (s *RemoteSpan) Child(name string) (*Span, FinishFunc) {
 	child := &Span{
 		id:     client.NewSpan(s.id, nil),
 		labels: make(map[string][]byte),
@@ -90,7 +90,7 @@ func (s *RemoteSpan) NewChild(name string) (*Span, FinishFunc) {
 	return child, fn
 }
 
-func (s *RemoteSpan) NewCausal(name string) (*Span, FinishFunc) {
+func (s *RemoteSpan) Causal(name string) (*Span, FinishFunc) {
 	panic("not yet")
 }
 
