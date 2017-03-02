@@ -101,7 +101,9 @@ func (c *client) NewSpan(parent []byte, causal []byte) []byte { // TODO(jbd): ad
 
 func (c *client) Finish(id []byte, name string, labels map[string][]byte, start, end time.Time) error {
 	var ident spanID
-	json.Unmarshal(id, &ident) // ignore errors
+	if err := json.Unmarshal(id, &ident); err != nil {
+		return err
+	}
 	s := &span{
 		name:   name,
 		id:     ident,
