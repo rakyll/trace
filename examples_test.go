@@ -19,6 +19,8 @@ func ExampleNewTrace() {
 
 	sp.SetLabel("hello", []byte("error happened"))
 
+	trace.ToHTTP(c, req, sp)
+
 	carrier, ok := c.(HTTPCarrier)
 	if ok {
 		carrier.ToHTTP(req, sp.ID())
