@@ -60,7 +60,7 @@ func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 	return req, nil
 }
 
-func (s *Span) NewCausual(name string) (*Span, FinishFunc) {
+func (s *Span) NewCausal(name string) (*Span, FinishFunc) {
 	panic("not yet")
 }
 
@@ -90,7 +90,7 @@ func (s *RemoteSpan) NewChild(name string) (*Span, FinishFunc) {
 	return child, fn
 }
 
-func (s *RemoteSpan) NewCausual(name string) (*Span, FinishFunc) {
+func (s *RemoteSpan) NewCausal(name string) (*Span, FinishFunc) {
 	panic("not yet")
 }
 
