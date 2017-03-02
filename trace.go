@@ -117,26 +117,13 @@ type HTTPCarrier interface {
 // Tracing backends are supposed to implement the interface in order to
 // provide Go support.
 //
-//
 // A Client is an HTTPCarrier if it can propagate the tracing
 // information via an HTTP request.
 //
 // If you are not a tracing provider, you will never have to interact with
 // this interface directly.
 type Client interface {
-	// NewSpan creates a new span from the parent context's span.
-	//
-	// If parent context doesn't already have a span, it creates a top-level span.
-	//
-	// Span start time should be the given start.
 	NewSpan(parent []byte, causal []byte) (id []byte)
-
-	// Finish finishes the span in the context with the given labels.
-	//
-	// If causal is non-nil, span needs to be finalized with a causal relationship.
-	// Nil labels should be accepted.
-	//
-	// Span should have given start and end time.
 	Finish(id []byte, name string, labels map[string][]byte, start, end time.Time) error
 }
 
