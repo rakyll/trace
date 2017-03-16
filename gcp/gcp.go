@@ -8,8 +8,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/rakyll/trace"
-
+	"github.com/rakyll/trace2"
 	api "google.golang.org/api/cloudtrace/v1"
 	"google.golang.org/api/option"
 	"google.golang.org/api/support/bundler"

@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/rakyll/trace"
-	"github.com/rakyll/trace/gcp"
+	"github.com/rakyll/trace2"
+	"github.com/rakyll/trace2/gcp"
 )
 
 func ExampleNewTrace() {
@@ -19,7 +19,7 @@ func ExampleNewTrace() {
 	span, finish := trace.NewSpan("/foo")
 	defer finish()
 
-	span.SetLabel("hello", []byte("error happened"))
+	span.Annotate("hello", []byte("error happened"))
 
 	req, _ := http.NewRequest("GET", "http://google.com/", nil)
 	req, err = span.ToHTTPReq(req)
