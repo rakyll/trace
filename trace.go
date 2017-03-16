@@ -13,6 +13,10 @@ import (
 
 var client Client
 
+// TODO(jbd): annotate with labels that can propagate.
+
+// TODO(jbd): set error.
+
 // TODO(jbd): A big TODO, we probably don't want to set a global client.
 func Configure(c Client) {
 	client = c
@@ -133,8 +137,7 @@ func FromContext(ctx context.Context) *Span {
 	return ctx.Value(spanKey).(*Span)
 }
 
-// FinishFunc finalizes the span from the current context.
-// Each span context created by ChildSpan should be finished when their work is finished.
+// FinishFunc finalizes its span.
 type FinishFunc func() error
 
 type contextKey struct{}
