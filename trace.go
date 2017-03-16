@@ -123,10 +123,12 @@ func NewSpan(name string) (*Span, FinishFunc) {
 	return span, fn
 }
 
+// NewContext returns a context with the span in.
 func NewContext(ctx context.Context, span *Span) context.Context {
 	return context.WithValue(ctx, spanKey, span)
 }
 
+// FromContext returns a span from the given context.
 func FromContext(ctx context.Context) *Span {
 	return ctx.Value(spanKey).(*Span)
 }
