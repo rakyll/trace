@@ -29,9 +29,9 @@ func (s *Span) ID() []byte {
 	return s.id
 }
 
-// SetLabel allows you to set a label on the current span. Labels are
+// Annotate allows you to attach data to a span. Key-value pairs are
 // arbitary information you want to collect in the lifetime of a span.
-func (s *Span) SetLabel(key string, val []byte) {
+func (s *Span) Annotate(key string, val []byte) {
 	s.labels[key] = val
 }
 
