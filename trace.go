@@ -5,6 +5,7 @@
 package trace
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -35,7 +36,8 @@ func (s *Span) SetLabel(key string, val []byte) {
 }
 
 // Child creates a child span from s with the given name.
-// Created child span needs to be finished by calling the finishing function.
+// Created child span needs to be finished by calling
+// the finishing function.
 func (s *Span) Child(name string) (*Span, FinishFunc) {
 	child := &Span{
 		id:     client.NewSpan(s.id, nil),
@@ -48,6 +50,11 @@ func (s *Span) Child(name string) (*Span, FinishFunc) {
 	return child, fn
 }
 
+// ToHTTPReq injects the span information in the given request
+// and returns the modified request.
+//
+// If the current client is not supporting HTTP propagation,
+// an error is returned.
 func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 	hc, ok := client.(HTTPCarrier)
 	if ok {
@@ -64,37 +71,11 @@ func (s *Span) Causal(name string) (*Span, FinishFunc) {
 	panic("not yet")
 }
 
-// RemoteSpan represents spans created by a remote server.
-// A remote span is useful to create children and causual relationships
-// to a span living remotely.
-type RemoteSpan struct {
-	id []byte
-}
-
-// ID returns the backend-specific global identifier of the span.
-func (s *RemoteSpan) ID() []byte {
-	return s.id
-}
-
-// Child creates a child span from s with the given name.
-// Created child span needs to be finished by calling the finishing function.
-func (s *RemoteSpan) Child(name string) (*Span, FinishFunc) {
-	child := &Span{
-		id:     client.NewSpan(s.id, nil),
-		labels: make(map[string][]byte),
-	}
-	start := time.Now()
-	fn := func() error {
-		return client.Finish(child.id, name, child.labels, start, time.Now())
-	}
-	return child, fn
-}
-
-func (s *RemoteSpan) Causal(name string) (*Span, FinishFunc) {
-	panic("not yet")
-}
-
-func FromHTTPReq(req *http.Request) (*RemoteSpan, error) {
+// FromHTTPReq creates a *Span from an incoming request.
+//
+// An error will be returned if the current tracing client is
+// not supporting propagation via HTTP.
+func FromHTTPReq(req *http.Request) (*Span, error) {
 	hc, ok := client.(HTTPCarrier)
 	if ok {
 		return nil, errors.New("not supported")
@@ -103,7 +84,7 @@ func FromHTTPReq(req *http.Request) (*RemoteSpan, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &RemoteSpan{id: id}, nil
+	return &Span{id: id}, nil
 }
 
 // HTTPCarrier represents a mechanism that can attach the tracing
@@ -127,6 +108,9 @@ type Client interface {
 	Finish(id []byte, name string, labels map[string][]byte, start, end time.Time) error
 }
 
+// NewSpan creates a new root-level span.
+//
+// The span must be finished when the job it represents it is finished.
 func NewSpan(name string) (*Span, FinishFunc) {
 	span := &Span{
 		id:     client.NewSpan(nil, nil),
@@ -139,6 +123,18 @@ func NewSpan(name string) (*Span, FinishFunc) {
 	return span, fn
 }
 
+func NewContext(ctx context.Context, span *Span) context.Context {
+	return context.WithValue(ctx, spanKey, span)
+}
+
+func FromContext(ctx context.Context) *Span {
+	return ctx.Value(spanKey).(*Span)
+}
+
 // FinishFunc finalizes the span from the current context.
 // Each span context created by ChildSpan should be finished when their work is finished.
 type FinishFunc func() error
+
+type contextKey struct{}
+
+var spanKey = contextKey{}
