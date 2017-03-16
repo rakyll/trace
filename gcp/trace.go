@@ -78,6 +78,5 @@ func constructTrace(projID string, span *span) *api.Trace {
 type spanID struct {
 	TraceID  string
 	ParentID uint64
-	CausalID uint64
 	ID       uint64
 }

@@ -42,14 +42,14 @@ func (s *Span) Annotate(key string, val []byte) {
 // Child creates a child span from s with the given name.
 // Created child span needs to be finished by calling
 // the finishing function.
-func (s *Span) Child(name string) (*Span, FinishFunc) {
+func (s *Span) Child(name string, linked ...*Span) (*Span, FinishFunc) {
 	child := &Span{
-		id:     client.NewSpan(s.id, nil),
+		id:     client.NewSpan(s.id),
 		labels: make(map[string][]byte),
 	}
 	start := time.Now()
 	fn := func() error {
-		return client.Finish(child.id, name, child.labels, start, time.Now())
+		return client.Finish(child.id, name, spanIDs(linked), child.labels, start, time.Now())
 	}
 	return child, fn
 }
@@ -69,10 +69,6 @@ func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 		return nil, err
 	}
 	return req, nil
-}
-
-func (s *Span) Causal(name string) (*Span, FinishFunc) {
-	panic("not yet")
 }
 
 // FromHTTPReq creates a *Span from an incoming request.
@@ -108,21 +104,21 @@ type HTTPCarrier interface {
 // If you are not a tracing provider, you will never have to interact with
 // this interface directly.
 type Client interface {
-	NewSpan(parent []byte, causal []byte) (id []byte)
-	Finish(id []byte, name string, labels map[string][]byte, start, end time.Time) error
+	NewSpan(parent []byte) (id []byte)
+	Finish(id []byte, name string, linked [][]byte, labels map[string][]byte, start, end time.Time) error
 }
 
 // NewSpan creates a new root-level span.
 //
 // The span must be finished when the job it represents it is finished.
-func NewSpan(name string) (*Span, FinishFunc) {
+func NewSpan(name string, linked ...*Span) (*Span, FinishFunc) {
 	span := &Span{
-		id:     client.NewSpan(nil, nil),
+		id:     client.NewSpan(nil),
 		labels: make(map[string][]byte),
 	}
 	start := time.Now()
 	fn := func() error {
-		return client.Finish(span.id, name, span.labels, start, time.Now())
+		return client.Finish(span.id, name, spanIDs(linked), span.labels, start, time.Now())
 	}
 	return span, fn
 }
@@ -135,6 +131,14 @@ func NewContext(ctx context.Context, span *Span) context.Context {
 // FromContext returns a span from the given context.
 func FromContext(ctx context.Context) *Span {
 	return ctx.Value(spanKey).(*Span)
+}
+
+func spanIDs(spans []*Span) [][]byte {
+	var links [][]byte
+	for _, s := range spans {
+		links = append(links, s.id)
+	}
+	return links
 }
 
 // FinishFunc finalizes its span.

@@ -78,28 +78,23 @@ func (c *client) upload(traces []*api.Trace) error {
 	return err
 }
 
-func (c *client) NewSpan(parent []byte, causal []byte) []byte { // TODO(jbd): add error.
+func (c *client) NewSpan(parent []byte) []byte { // TODO(jbd): add error.
 	var parentID spanID
-	var causalID spanID
 
 	if parent != nil {
 		json.Unmarshal(parent, &parentID) // ignore errors
-	}
-	if causal != nil {
-		json.Unmarshal(causal, &causalID) // ignore errors
 	}
 
 	id := spanID{
 		TraceID:  parentID.TraceID,
 		ID:       nextSpanID(),
-		CausalID: causalID.ID,
 		ParentID: parentID.ID,
 	}
 	by, _ := json.Marshal(id)
 	return by
 }
 
-func (c *client) Finish(id []byte, name string, labels map[string][]byte, start, end time.Time) error {
+func (c *client) Finish(id []byte, name string, links [][]byte, labels map[string][]byte, start, end time.Time) error {
 	var ident spanID
 	if err := json.Unmarshal(id, &ident); err != nil {
 		return err
