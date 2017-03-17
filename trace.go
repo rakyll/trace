@@ -61,7 +61,7 @@ func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 	if !ok {
 		return req, errors.New("not supported")
 	}
-	err := hc.ToHTTPReq(req, s.ID)
+	err := hc.ToReq(req, s.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func FromHTTPReq(req *http.Request) (*Span, error) {
 	if !ok {
 		return nil, errors.New("not supported")
 	}
-	id, err := hc.FromHTTPReq(req)
+	id, err := hc.FromReq(req)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +87,8 @@ func FromHTTPReq(req *http.Request) (*Span, error) {
 // HTTPCarrier represents a mechanism that can attach the tracing
 // information into an HTTP request or extract it from one.
 type HTTPCarrier interface {
-	FromHTTPReq(req *http.Request) (id []byte, err error)
-	ToHTTPReq(req *http.Request, id []byte) error
+	FromReq(req *http.Request) (id []byte, err error)
+	ToReq(req *http.Request, id []byte) error
 }
 
 // Client represents a client communicates with a tracing backend.
