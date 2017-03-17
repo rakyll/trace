@@ -58,7 +58,7 @@ func (s *Span) Child(name string, linked ...*Span) (*Span, FinishFunc) {
 // an error is returned.
 func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 	hc, ok := client.(HTTPCarrier)
-	if ok {
+	if !ok {
 		return req, errors.New("not supported")
 	}
 	err := hc.ToHTTPReq(req, s.ID)
@@ -74,7 +74,7 @@ func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 // not supporting propagation via HTTP.
 func FromHTTPReq(req *http.Request) (*Span, error) {
 	hc, ok := client.(HTTPCarrier)
-	if ok {
+	if !ok {
 		return nil, errors.New("not supported")
 	}
 	id, err := hc.FromHTTPReq(req)
