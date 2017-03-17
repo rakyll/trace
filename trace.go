@@ -13,9 +13,11 @@ import (
 
 var client Client
 
-// TODO(jbd): annotate with labels that can propagate.
+// TODO(jbd): annotate with labels that can propagate, similar to OpenTracing baggage.
 
-// TODO(jbd): set error.
+// TODO(jbd): should we support a span to have multiple parents?
+
+// TODO(jbd): set error/state on finish.
 
 // TODO(jbd): A big TODO, we probably don't want to set a global client.
 func Configure(c Client) {
