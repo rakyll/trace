@@ -24,19 +24,14 @@ func Configure(c Client) {
 
 // Span represents a work.
 type Span struct {
-	id     []byte
-	labels map[string][]byte
-}
-
-// ID returns the backend-specific global identifier of the span.
-func (s *Span) ID() []byte {
-	return s.id
+	ID          []byte            // represents the global identifier of the span.
+	Annotations map[string][]byte // annotations set on this span.
 }
 
 // Annotate allows you to attach data to a span. Key-value pairs are
 // arbitary information you want to collect in the lifetime of a span.
 func (s *Span) Annotate(key string, val []byte) {
-	s.labels[key] = val
+	s.Annotations[key] = val
 }
 
 // Child creates a child span from s with the given name.
@@ -44,12 +39,12 @@ func (s *Span) Annotate(key string, val []byte) {
 // the finishing function.
 func (s *Span) Child(name string, linked ...*Span) (*Span, FinishFunc) {
 	child := &Span{
-		id:     client.NewSpan(s.id),
-		labels: make(map[string][]byte),
+		ID:          client.NewSpan(s.ID),
+		Annotations: make(map[string][]byte),
 	}
 	start := time.Now()
 	fn := func() error {
-		return client.Finish(child.id, name, spanIDs(linked), child.labels, start, time.Now())
+		return client.Finish(child.ID, name, spanIDs(linked), child.Annotations, start, time.Now())
 	}
 	return child, fn
 }
@@ -64,7 +59,7 @@ func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 	if ok {
 		return req, errors.New("not supported")
 	}
-	err := hc.ToHTTPReq(req, s.id)
+	err := hc.ToHTTPReq(req, s.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +79,7 @@ func FromHTTPReq(req *http.Request) (*Span, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Span{id: id}, nil
+	return &Span{ID: id}, nil
 }
 
 // HTTPCarrier represents a mechanism that can attach the tracing
@@ -105,7 +100,7 @@ type HTTPCarrier interface {
 // this interface directly.
 type Client interface {
 	NewSpan(parent []byte) (id []byte)
-	Finish(id []byte, name string, linked [][]byte, labels map[string][]byte, start, end time.Time) error
+	Finish(id []byte, name string, linked [][]byte, annotations map[string][]byte, start, end time.Time) error
 }
 
 // NewSpan creates a new root-level span.
@@ -113,12 +108,12 @@ type Client interface {
 // The span must be finished when the job it represents it is finished.
 func NewSpan(name string, linked ...*Span) (*Span, FinishFunc) {
 	span := &Span{
-		id:     client.NewSpan(nil),
-		labels: make(map[string][]byte),
+		ID:          client.NewSpan(nil),
+		Annotations: make(map[string][]byte),
 	}
 	start := time.Now()
 	fn := func() error {
-		return client.Finish(span.id, name, spanIDs(linked), span.labels, start, time.Now())
+		return client.Finish(span.ID, name, spanIDs(linked), span.Annotations, start, time.Now())
 	}
 	return span, fn
 }
@@ -136,7 +131,7 @@ func FromContext(ctx context.Context) *Span {
 func spanIDs(spans []*Span) [][]byte {
 	var links [][]byte
 	for _, s := range spans {
-		links = append(links, s.id)
+		links = append(links, s.ID)
 	}
 	return links
 }
