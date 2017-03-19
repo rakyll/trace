@@ -19,6 +19,8 @@ var client Client
 
 // TODO(jbd): set error/state on finish.
 
+// TODO(jbd): Avoid things if client = nil.
+
 // TODO(jbd): A big TODO, we probably don't want to set a global client.
 func Configure(c Client) {
 	client = c
@@ -33,6 +35,9 @@ type Span struct {
 // Annotate allows you to attach data to a span. Key-value pairs are
 // arbitary information you want to collect in the lifetime of a span.
 func (s *Span) Annotate(key string, val []byte) {
+	if s == nil {
+		return
+	}
 	s.Annotations[key] = val
 }
 
@@ -40,6 +45,9 @@ func (s *Span) Annotate(key string, val []byte) {
 // Created child span needs to be finished by calling
 // the finishing function.
 func (s *Span) Child(name string, linked ...*Span) (*Span, FinishFunc) {
+	if s == nil {
+		return nil, noop
+	}
 	child := &Span{
 		ID:          client.NewSpan(s.ID),
 		Annotations: make(map[string][]byte),
@@ -57,6 +65,9 @@ func (s *Span) Child(name string, linked ...*Span) (*Span, FinishFunc) {
 // If the current client is not supporting HTTP propagation,
 // an error is returned.
 func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
+	if s == nil {
+		return req, nil
+	}
 	hc, ok := client.(HTTPCarrier)
 	if !ok {
 		return req, errors.New("not supported")
@@ -144,3 +155,5 @@ type FinishFunc func() error
 type contextKey struct{}
 
 var spanKey = contextKey{}
+
+func noop() error { return nil }
