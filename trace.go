@@ -142,11 +142,11 @@ func FromContext(ctx context.Context) *Span {
 }
 
 func spanIDs(spans []*Span) [][]byte {
-	var links [][]byte
+	var ids [][]byte
 	for _, s := range spans {
-		links = append(links, s.ID)
+		ids = append(ids, s.ID)
 	}
-	return links
+	return ids
 }
 
 // FinishFunc finalizes its span.
