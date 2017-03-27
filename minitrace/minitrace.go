@@ -15,7 +15,7 @@ func FromContext(ctx context.Context) Span {
 	return ctx.Value(spanKey).(Span)
 }
 
-type ReqCarrier interface {
+type HTTPCarrier interface {
 	SpanFromReq(req *http.Request) (Span, error)
 	SpanToReq(req *http.Request, s Span) error
 }
