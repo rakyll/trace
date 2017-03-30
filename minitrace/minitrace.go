@@ -30,10 +30,12 @@ func FromContext(ctx context.Context) Span {
 // If the incoming request doesn't contain trace information,
 // a nil span is returned with no errors.
 //
-// SpanToReq mutates the outgoing request with the span.
+// SpanToReq mutates the outgoing request with the span, and
+// returns a shallow copy of the request. If span is nil,
+// req is not mutated.
 type HTTPCarrier interface {
 	SpanFromReq(req *http.Request) (Span, error)
-	SpanToReq(req *http.Request, s Span) error
+	SpanToReq(req *http.Request, s Span) (*http.Request, error)
 }
 
 type contextKey struct{}
