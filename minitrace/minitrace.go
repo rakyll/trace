@@ -4,6 +4,8 @@ package minitrace
 
 // TODO(jbd): Rename this package to trace and propose it to the standard library.
 
+// TODO(jbd): Rename Span to SpanID? Then, does it represent propagated labels?
+
 import (
 	"context"
 	"net/http"
