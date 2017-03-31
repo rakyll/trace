@@ -6,14 +6,15 @@ package trace
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"time"
+
+	"github.com/rakyll/trace/minitrace"
 )
 
 var client Client
 
-// TODO(jbd): annotate with labels that can propagate, similar to OpenTracing baggage.
+// TODO(jbd): how to propagate a subset of labels?
 
 // TODO(jbd): should we support a span to have multiple parents?
 
@@ -68,15 +69,11 @@ func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 	if s == nil {
 		return req, nil
 	}
-	hc, ok := client.(HTTPCarrier)
+	hc, ok := client.(minitrace.HTTPCarrier)
 	if !ok {
-		return req, errors.New("not supported")
+		return req, nil
 	}
-	err := hc.ToReq(req, s.ID)
-	if err != nil {
-		return nil, err
-	}
-	return req, nil
+	return hc.SpanToReq(req, s.ID)
 }
 
 // FromHTTPReq creates a *Span from an incoming request.
@@ -84,22 +81,15 @@ func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 // An error will be returned if the current tracing client is
 // not supporting propagation via HTTP.
 func FromHTTPReq(req *http.Request) (*Span, error) {
-	hc, ok := client.(HTTPCarrier)
+	hc, ok := client.(minitrace.HTTPCarrier)
 	if !ok {
-		return nil, errors.New("not supported")
+		return nil, nil
 	}
-	id, err := hc.FromReq(req)
+	id, err := hc.SpanFromReq(req)
 	if err != nil {
 		return nil, err
 	}
 	return &Span{ID: id}, nil
-}
-
-// HTTPCarrier represents a mechanism that can attach the tracing
-// information into an HTTP request or extract it from one.
-type HTTPCarrier interface {
-	FromReq(req *http.Request) (id []byte, err error)
-	ToReq(req *http.Request, id []byte) error
 }
 
 // Client represents a client communicates with a tracing backend.

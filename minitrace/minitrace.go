@@ -2,6 +2,8 @@
 // propagation of tracing information.
 package minitrace
 
+// TODO(jbd): Rename this package to trace and propose it to the standard library.
+
 import (
 	"context"
 	"net/http"
