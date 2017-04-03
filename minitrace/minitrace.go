@@ -11,12 +11,16 @@ import (
 	"net/http"
 )
 
-// Span identifies a span globally in a tracing system
-// and may contain annotations the span is propagating.
+// Span represents a unit of work.
 //
-// The identification and the formatting of propagated
-// annotations might be tracing backend-specific.
-type Span []byte
+// ID identifies a span globally in a tracing system.
+//
+// Annotations return the labels propagated with the span.
+// Encoding method might be tracing-backend specific.
+type Span interface {
+	ID() []byte
+	Annotations() []byte
+}
 
 // NewContext returns a context with the given span.
 func NewContext(ctx context.Context, s Span) context.Context {

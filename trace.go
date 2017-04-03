@@ -73,7 +73,19 @@ func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 	if !ok {
 		return req, nil
 	}
-	return hc.SpanToReq(req, s.ID)
+	return hc.SpanToReq(req, &sspan{id: s.ID})
+}
+
+type sspan struct {
+	id []byte
+}
+
+func (s *sspan) ID() []byte {
+	return s.id
+}
+
+func (s *sspan) Annotations() []byte {
+	return nil
 }
 
 // FromHTTPReq creates a *Span from an incoming request.
@@ -85,11 +97,11 @@ func FromHTTPReq(req *http.Request) (*Span, error) {
 	if !ok {
 		return nil, nil
 	}
-	id, err := hc.SpanFromReq(req)
+	span, err := hc.SpanFromReq(req)
 	if err != nil {
 		return nil, err
 	}
-	return &Span{ID: id}, nil
+	return &Span{ID: span.ID()}, nil
 }
 
 // Client represents a client communicates with a tracing backend.
