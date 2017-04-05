@@ -69,7 +69,7 @@ func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
 	if s == nil {
 		return req, nil
 	}
-	hc, ok := client.(minitrace.HTTPCarrier)
+	hc, ok := client.(minitrace.HTTPInjector)
 	if !ok {
 		return req, nil
 	}
@@ -93,7 +93,7 @@ func (s *sspan) Annotations() []byte {
 // An error will be returned if the current tracing client is
 // not supporting propagation via HTTP.
 func FromHTTPReq(req *http.Request) (*Span, error) {
-	hc, ok := client.(minitrace.HTTPCarrier)
+	hc, ok := client.(minitrace.HTTPExtractor)
 	if !ok {
 		return nil, nil
 	}
@@ -108,8 +108,8 @@ func FromHTTPReq(req *http.Request) (*Span, error) {
 // Tracing backends are supposed to implement the interface in order to
 // provide Go support.
 //
-// A Client is an HTTPCarrier if it can propagate the tracing
-// information via an HTTP request.
+// A Client is an HTTPExtractor if it can extract spans from an incoming HTTP request.
+// A Client in an HTTPInjector if it can inject span info into an outgoing HTTP request.
 //
 // If you are not a tracing provider, you will never have to interact with
 // this interface directly.
