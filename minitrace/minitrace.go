@@ -32,18 +32,29 @@ func FromContext(ctx context.Context) Span {
 	return ctx.Value(spanKey).(Span)
 }
 
-// HTTPCarrier allows spans to be propagated via HTTP requests.
+// HTTPInjector allows spans to be propagated via HTTP requests.
 //
 // SpanFromReq returns a span from the incoming HTTP request.
 // If the incoming request doesn't contain trace information,
 // a nil span is returned with no errors.
+type HTTPInjector interface {
+	SpanFromReq(req *http.Request) (Span, error)
+}
+
+// HTTPExtractor allows spans to be extracted from the incoming
+// HTTP requests.
 //
 // SpanToReq mutates the outgoing request with the span, and
 // returns a shallow copy of the request. If span is nil,
 // req is not mutated.
-type HTTPCarrier interface {
-	SpanFromReq(req *http.Request) (Span, error)
+type HTTPExtractor interface {
 	SpanToReq(req *http.Request, s Span) (*http.Request, error)
+}
+
+// HTTPInjectorExtractor combines span injection and extraction.
+type HTTPInjectorExtractor interface {
+	HTTPInjector
+	HTTPExtractor
 }
 
 type contextKey struct{}
