@@ -32,22 +32,22 @@ func FromContext(ctx context.Context) Span {
 	return ctx.Value(spanKey).(Span)
 }
 
-// HTTPInjector allows spans to be propagated via HTTP requests.
+// HTTPExtractor allows spans to be propagated via HTTP requests.
 //
 // SpanFromReq returns a span from the incoming HTTP request.
 // If the incoming request doesn't contain trace information,
 // a nil span is returned with no errors.
-type HTTPInjector interface {
+type HTTPExtractor interface {
 	SpanFromReq(req *http.Request) (Span, error)
 }
 
-// HTTPExtractor allows spans to be extracted from the incoming
+// HTTPInjector allows spans to be extracted from the incoming
 // HTTP requests.
 //
 // SpanToReq mutates the outgoing request with the span, and
 // returns a shallow copy of the request. If span is nil,
 // req is not mutated.
-type HTTPExtractor interface {
+type HTTPInjector interface {
 	SpanToReq(req *http.Request, s Span) (*http.Request, error)
 }
 
