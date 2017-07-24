@@ -1,161 +1,112 @@
 // Package trace defines common-use Dapper-style tracing APIs for the Go programming language.
-//
-// Package trace provides a backend-agnostic APIs and various tracing providers
-// can be used with the package by importing various implementations of the Client interface.
 package trace
 
 import (
 	"context"
-	"net/http"
+	"sync"
 	"time"
-
-	"github.com/rakyll/trace/minitrace"
 )
 
-var client Client
+var (
+	notifierMu sync.RWMutex
+	notifier   func(s *Span)
+)
 
-// TODO(jbd): how to propagate a subset of labels?
-
-// TODO(jbd): should we support a span to have multiple parents?
-
-// TODO(jbd): set error/state on finish.
-
-// TODO(jbd): Avoid things if client = nil.
-
-// TODO(jbd): A big TODO, we probably don't want to set a global client.
-func Configure(c Client) {
-	client = c
-}
-
-// Span represents a work.
 type Span struct {
-	ID          []byte            // represents the global identifier of the span.
-	Annotations map[string][]byte // annotations set on this span.
+	TraceID  []byte
+	ParentID []byte
+	ID       []byte
+
+	Name      string
+	StartTime time.Time
+	EndTime   time.Time
+
+	labelsMu sync.Mutex
+	labels   map[string]string
 }
 
-// Annotate allows you to attach data to a span. Key-value pairs are
-// arbitary information you want to collect in the lifetime of a span.
-func (s *Span) Annotate(key string, val []byte) {
+func NewSpan(name string) *Span {
+	notifierMu.RLock()
+	defer notifierMu.RUnlock()
+	if notifier == nil {
+		return nil
+	}
+
+	// TODO(jbd): Return nil if not sampled.
+	return &Span{
+		TraceID:   nil, //TODO(jbd): Generate.
+		ID:        nil, //TODO(jbd): Generate.
+		Name:      name,
+		StartTime: time.Now(),
+	}
+}
+
+func (s *Span) End() {
 	if s == nil {
 		return
 	}
-	s.Annotations[key] = val
+	s.EndTime = time.Now()
+	notifierMu.RLock()
+	defer notifierMu.RUnlock()
+
+	if notifier != nil {
+		notifier(s)
+	}
 }
 
-// Child creates a child span from s with the given name.
-// Created child span needs to be finished by calling
-// the finishing function.
-func (s *Span) Child(name string, linked ...*Span) (*Span, FinishFunc) {
+func (s *Span) NewChild(name string) *Span {
 	if s == nil {
-		return nil, noop
+		return nil
 	}
-	child := &Span{
-		ID:          client.NewSpan(s.ID),
-		Annotations: make(map[string][]byte),
+	return &Span{
+		TraceID:   s.TraceID,
+		ParentID:  s.ID,
+		ID:        nil, //TODO(jbd): Generate.
+		Name:      name,
+		StartTime: time.Now(),
 	}
-	start := time.Now()
-	fn := func() error {
-		return client.Finish(child.ID, name, spanIDs(linked), child.Annotations, start, time.Now())
-	}
-	return child, fn
 }
 
-// ToHTTPReq injects the span information in the given request
-// and returns the modified request.
-//
-// If the current client is not supporting HTTP propagation,
-// an error is returned.
-func (s *Span) ToHTTPReq(req *http.Request) (*http.Request, error) {
-	if s == nil {
-		return req, nil
+func (s *Span) SetLabels(args ...string) {
+	if len(args)%2 != 0 {
+		panic("even number of arguments required")
 	}
-	hc, ok := client.(minitrace.HTTPInjector)
-	if !ok {
-		return req, nil
+	s.labelsMu.Lock()
+	defer s.labelsMu.Unlock()
+
+	for i := 0; i < len(args); i += 2 {
+		s.labels[args[i]] = s.labels[args[i+1]]
 	}
-	return hc.SpanToReq(req, &sspan{id: s.ID})
 }
 
-type sspan struct {
-	id []byte
-}
-
-func (s *sspan) ID() []byte {
-	return s.id
-}
-
-func (s *sspan) Annotations() []byte {
-	return nil
-}
-
-// FromHTTPReq creates a *Span from an incoming request.
-//
-// An error will be returned if the current tracing client is
-// not supporting propagation via HTTP.
-func FromHTTPReq(req *http.Request) (*Span, error) {
-	hc, ok := client.(minitrace.HTTPExtractor)
-	if !ok {
-		return nil, nil
+func (s *Span) ForLabels(f func(key, value string)) {
+	for k, v := range s.labels {
+		f(k, v)
 	}
-	span, err := hc.SpanFromReq(req)
-	if err != nil {
-		return nil, err
-	}
-	return &Span{ID: span.ID()}, nil
 }
 
-// Client represents a client communicates with a tracing backend.
-// Tracing backends are supposed to implement the interface in order to
-// provide Go support.
-//
-// A Client is an HTTPExtractor if it can extract spans from an incoming HTTP request.
-// A Client in an HTTPInjector if it can inject span info into an outgoing HTTP request.
-//
-// If you are not a tracing provider, you will never have to interact with
-// this interface directly.
-type Client interface {
-	NewSpan(parent []byte) (id []byte)
-	Finish(id []byte, name string, linked [][]byte, annotations map[string][]byte, start, end time.Time) error
-}
-
-// NewSpan creates a new root-level span.
-//
-// The span must be finished when the job it represents it is finished.
-func NewSpan(name string, linked ...*Span) (*Span, FinishFunc) {
-	span := &Span{
-		ID:          client.NewSpan(nil),
-		Annotations: make(map[string][]byte),
-	}
-	start := time.Now()
-	fn := func() error {
-		return client.Finish(span.ID, name, spanIDs(linked), span.Annotations, start, time.Now())
-	}
-	return span, fn
-}
-
-// NewContext returns a context with the span in.
 func NewContext(ctx context.Context, span *Span) context.Context {
-	return context.WithValue(ctx, spanKey, span)
+	return context.WithValue(ctx, ctxKey, span)
 }
 
-// FromContext returns a span from the given context.
 func FromContext(ctx context.Context) *Span {
-	return ctx.Value(spanKey).(*Span)
+	return ctx.Value(ctxKey).(*Span)
 }
 
-func spanIDs(spans []*Span) [][]byte {
-	var ids [][]byte
-	for _, s := range spans {
-		ids = append(ids, s.ID)
-	}
-	return ids
+func Start(fn func(s *Span)) {
+	notifierMu.Lock()
+	defer notifierMu.Unlock()
+
+	notifier = fn
 }
 
-// FinishFunc finalizes its span.
-type FinishFunc func() error
+func Stop() {
+	notifierMu.Lock()
+	defer notifierMu.Unlock()
 
-type contextKey struct{}
+	notifier = nil
+}
 
-var spanKey = contextKey{}
+type spanContextKey struct{}
 
-func noop() error { return nil }
+var ctxKey = spanContextKey{}
